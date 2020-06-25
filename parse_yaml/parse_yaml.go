@@ -27,10 +27,10 @@ type ProgramsStruct struct {
 	Programs map[string]Program `yaml:"programs"`
 }
 
-func parse_yaml(filename string) map[string]Program {
+func parse_yaml(yamlfile string) map[string]Program {
 	var programs_struct ProgramsStruct
 
-	yaml_data, err := ioutil.ReadFile(filename)
+	yaml_data, err := ioutil.ReadFile(yamlfile)
 	if err != nil {
 		log.Fatal(err)
 	}
