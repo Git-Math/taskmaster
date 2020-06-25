@@ -63,7 +63,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 		}
 	case "stop":
 		if len(args) == 0 {
-			fmt.Printf("stop command needs at least one program name as argument")
+			fmt.Println("stop command needs at least one program name as argument")
 			return
 		}
 		for _, arg := range args {
@@ -71,7 +71,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 		}
 	case "restart":
 		if len(args) == 0 {
-			fmt.Printf("restart command needs at least one program name as argument")
+			fmt.Println("restart command needs at least one program name as argument")
 			return
 		}
 		for _, arg := range args {
@@ -82,7 +82,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 	case "exit":
 		exit()
 	default:
-		fmt.Println("Command not found:", cmd)
+		fmt.Println("command not found:", cmd)
 	}
 }
 
