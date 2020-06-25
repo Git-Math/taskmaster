@@ -29,7 +29,7 @@ type ProgramsStruct struct {
 	Programs ProgramMap `yaml:"programs"`
 }
 
-func parse_yaml(yamlfile string) ProgramMap {
+func ParseYaml(yamlfile string) ProgramMap {
 	var programs_struct ProgramsStruct
 
 	yaml_data, err := ioutil.ReadFile(yamlfile)

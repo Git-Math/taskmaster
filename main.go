@@ -18,11 +18,11 @@ func usage() {
 }
 
 func status(program_map parse_yaml.ProgramMap) {
-	fmt.Println("status:", ProgramMap)
+	fmt.Println("status:", program_map)
 }
 
 func start(program string) {
-	fmt.Println("start:", porgram)
+	fmt.Println("start:", program)
 }
 
 func stop(program string) {
@@ -55,7 +55,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 		status(program_map)
 	case "start":
 		if len(args) == 0 {
-			fmt.Printf("start command needs at least one program name as argument")
+			fmt.Println("start command needs at least one program name as argument")
 			return
 		}
 		for _, arg := range args {
@@ -95,7 +95,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	program_map := parse_yaml.parse_yaml(os.Args[1])
+	program_map := parse_yaml.ParseYaml(os.Args[1])
 
 	term.Init()
 
