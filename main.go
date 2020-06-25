@@ -33,6 +33,10 @@ func restart(program string) {
 	fmt.Println("restart:", program)
 }
 
+func reload_config() {
+	fmt.Println("reload_config")
+}
+
 func exit() {
 	fmt.Println("exit")
 }
@@ -73,6 +77,8 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 		for _, arg := range args {
 			restart(arg)
 		}
+	case "reload_config":
+		reload_config()
 	case "exit":
 		exit()
 	default:
