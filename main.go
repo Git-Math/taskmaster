@@ -51,7 +51,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 		status(program_map)
 	case "start":
 		if len(args) == 0 {
-			fmt.Printf("start command needs at least one program name as argument")
+			fmt.Println("start command needs at least one program name as argument")
 			return
 		}
 		for _, arg := range args {
