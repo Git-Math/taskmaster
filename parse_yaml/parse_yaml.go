@@ -23,11 +23,13 @@ type Program struct {
 	Env          map[string]string `yaml:"env"`
 }
 
+type ProgramMap = map[string]Program
+
 type ProgramsStruct struct {
-	Programs map[string]Program `yaml:"programs"`
+	Programs ProgramMap `yaml:"programs"`
 }
 
-func parse_yaml(yamlfile string) map[string]Program {
+func parse_yaml(yamlfile string) ProgramMap {
 	var programs_struct ProgramsStruct
 
 	yaml_data, err := ioutil.ReadFile(yamlfile)
