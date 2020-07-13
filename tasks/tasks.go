@@ -81,6 +81,17 @@ func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 	go startDaemon(cfg.Startretries, cfg.Starttime)
 }
 
+func StopProgram(cfg parse_yaml.Program, daemon *Daemon) {
+	go func() {
+		daemon.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
+		time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
+		if daemon.Running {
+			daemon.Command.Process.Kill()
+		}
+		daemon.Stop()
+	}()
+}
+
 func Execute(program_map parse_yaml.ProgramMap) {
 	fmt.Println("I execute the processes and store Cmds in Daemons")
 	for key, program := range program_map {
