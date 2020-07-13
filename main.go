@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"taskmaster/master"
 	"taskmaster/parse_yaml"
+	"taskmaster/tasks"
 	"taskmaster/term"
 )
 
@@ -96,6 +98,9 @@ func main() {
 	}
 
 	program_map := parse_yaml.ParseYaml(os.Args[1])
+
+	tasks.Execute(program_map)
+	go master.Watch()
 
 	term.Init()
 
