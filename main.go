@@ -23,16 +23,25 @@ func status(program_map parse_yaml.ProgramMap) {
 	fmt.Println("status:", program_map)
 }
 
-func start(program string) {
-	fmt.Println("start:", program)
+func start(program_name string, cfg parse_yaml.Program) {
+	for _, daemon := range tasks.Daemons {
+		if daemon.Name == program_name && !daemon.Running {
+			tasks.StartProgram(cfg, daemon)
+		}
+	}
 }
 
-func stop(program string) {
-	fmt.Println("stop:", program)
+func stop(program_name string, cfg parse_yaml.Program) {
+	for _, daemon := range tasks.Daemons {
+		if daemon.Name == program_name && daemon.Running {
+			tasks.StopProgram(cfg, daemon)
+		}
+	}
 }
 
-func restart(program string) {
-	fmt.Println("restart:", program)
+func restart(program_name string, cfg parse_yaml.Program) {
+	stop(program_name, cfg)
+	start(program_name, cfg)
 }
 
 func reload_config() {
@@ -61,7 +70,11 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 			return
 		}
 		for _, arg := range args {
-			start(arg)
+			if _, key_exist := program_map[arg]; !key_exist {
+				fmt.Println("start: program [", arg, "] does not exist")
+			} else {
+				start(arg, program_map[arg])
+			}
 		}
 	case "stop":
 		if len(args) == 0 {
@@ -69,7 +82,11 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 			return
 		}
 		for _, arg := range args {
-			stop(arg)
+			if _, key_exist := program_map[arg]; !key_exist {
+				fmt.Println("stop: program [", arg, "] does not exist")
+			} else {
+				stop(arg, program_map[arg])
+			}
 		}
 	case "restart":
 		if len(args) == 0 {
@@ -77,7 +94,11 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 			return
 		}
 		for _, arg := range args {
-			restart(arg)
+			if _, key_exist := program_map[arg]; !key_exist {
+				fmt.Println("restart: program [", arg, "] does not exist")
+			} else {
+				restart(arg, program_map[arg])
+			}
 		}
 	case "reload_config":
 		reload_config()
