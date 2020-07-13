@@ -6,8 +6,13 @@ import (
 	"taskmaster/parse_yaml"
 )
 
-var Daemons []exec.Cmd
+type Daemon struct  {
+	Name string
+	Command exec.Cmd
+}
 
-func Execute(program_map map[string]parse_yaml.Program) {
+var Daemons []Daemon
+
+func Execute(program_map parse_yaml.ProgramMap) {
 	fmt.Println("I execute the processes and store Cmds in Daemons")
 }
