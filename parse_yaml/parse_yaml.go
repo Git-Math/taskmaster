@@ -4,7 +4,30 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"syscall"
 )
+
+var SignalMap = map[string]syscall.Signal{
+	"HUP":  syscall.SIGHUP,
+	"INT":  syscall.SIGINT,
+	"QUIT": syscall.SIGQUIT,
+	"ILL":  syscall.SIGILL,
+	"ABRT": syscall.SIGABRT,
+	"FPE":  syscall.SIGFPE,
+	"KILL": syscall.SIGKILL,
+	"SEGV": syscall.SIGSEGV,
+	"PIPE": syscall.SIGPIPE,
+	"ALRM": syscall.SIGALRM,
+	"TERM": syscall.SIGTERM,
+	"USR1": syscall.SIGUSR1,
+	"USR2": syscall.SIGUSR2,
+	"CHLD": syscall.SIGCHLD,
+	"CONT": syscall.SIGCONT,
+	"STOP": syscall.SIGSTOP,
+	"TSTP": syscall.SIGTSTP,
+	"TTIN": syscall.SIGTTIN,
+	"TTOU": syscall.SIGTTOU,
+}
 
 type Program struct {
 	Cmd          string   `yaml:"cmd"`
@@ -33,6 +56,10 @@ func CheckYaml(program_map ProgramMap) {
 	for key, program := range program_map {
 		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
 			log.Fatalln("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]")
+		}
+
+		if _, key_exist := SignalMap[program.Stopsignal]; !key_exist {
+			log.Fatalln("Program " + key + ": invalid stopsignal value: [" + program.Stopsignal + "]")
 		}
 	}
 }
