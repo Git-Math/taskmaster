@@ -11,7 +11,7 @@ type Program struct {
 	Numprocs     int               `yaml:"numprocs"`
 	Umask        string            `yaml:"umask"`
 	Workingdir   string            `yaml:"workingdir"`
-	Autostart    string            `yaml:"autostart"`
+	Autostart    bool              `yaml:"autostart"`
 	Autorestart  string            `yaml:"autorestart"`
 	Exitcodes    []int             `yaml:"exitcodes"`
 	Startretries int               `yaml:"startretries"`
@@ -29,6 +29,14 @@ type ProgramsStruct struct {
 	Programs ProgramMap `yaml:"programs"`
 }
 
+func checkYaml(program_map ProgramMap) {
+	for key, program := range program_map {
+		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
+			log.Fatalln("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]")
+		}
+	}
+}
+
 func ParseYaml(yamlfile string) ProgramMap {
 	var programs_struct ProgramsStruct
 
@@ -41,6 +49,8 @@ func ParseYaml(yamlfile string) ProgramMap {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	checkYaml(programs_struct.Programs)
 
 	return programs_struct.Programs
 }
