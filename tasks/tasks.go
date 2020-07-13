@@ -10,19 +10,42 @@ import (
 	"time"
 )
 
+func CurrentTime() int64 {
+	return 1000
+}
+
 type Daemon struct {
-	Name           string
-	Command        *exec.Cmd
-	StartTimestamp time.Time
-	Running        bool
-	StartTime      int64
-	StartRepeat    int
-	Err            chan error
+	Name      string     /* name of the program from the yaml */
+	Command   *exec.Cmd  /* Cmd */
+	StartTime int64      /* Start Time of the program */
+	Running   bool       /* Indicate that the program has been running long enough to say it's running */
+	Err       chan error /* Channel to the goroutine waiting for the program to return */
+}
+
+func (dae *Daemon) Start() error {
+	err := dae.Command.Start()
+	if err != nil {
+		return err
+	}
+	dae.Running = false
+	dae.Err = make(chan error)
+	dae.Err <- dae.Command.Run()
+	return nil
+}
+
+func (dae *Daemon) Run() {
+	dae.Running = true
+}
+
+func (dae *Daemon) Stop() {
+	dae.Running = false
+	dae.StartTime = 0
 }
 
 var Daemons []*Daemon
 
-func Register(daemon *Daemon, date time.Time, msg string) {
+func Register(daemon *Daemon, msg string) {
+	date := CurrentTime()
 	registerFile, err := os.OpenFile("register.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -32,21 +55,31 @@ func Register(daemon *Daemon, date time.Time, msg string) {
 	fmt.Fprintln(registerFile, date, "[", daemon.Name, "]", msg)
 }
 
-func StartProgram(daemon *Daemon) {
-	go func() {
-		date := time.Now()
+func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 
-		err := daemon.Command.Start()
-		if err != nil {
-			Register(daemon, date, "Failed to start")
-			return
+	startDaemon := func(retrieCount int, startTime int) {
+		for {
+			err := daemon.Start()
+			if err != nil {
+				daemon.StartTime = CurrentTime()
+				time.Sleep(time.Duration(startTime) * time.Second)
+				if !daemon.Command.ProcessState.Exited() {
+					Register(daemon, "Started")
+					daemon.Run()
+					return
+				}
+				daemon.Stop()
+			}
+			if retrieCount == 0 {
+				Register(daemon, "Failed to start after"+string(startTime)+"times")
+				break
+			} else {
+				retrieCount--
+			}
 		}
-		Register(daemon, date, "Started")
-		daemon.Running = true
-		daemon.Err = make(chan error)
-		daemon.Err <- daemon.Command.Run()
-	}()
+	}
 
+	go startDaemon(cfg.Startretries, cfg.Starttime)
 }
 
 func Execute(program_map parse_yaml.ProgramMap) {
@@ -93,7 +126,7 @@ func Execute(program_map parse_yaml.ProgramMap) {
 			Daemons = append(Daemons, &daemon)
 
 			if program.Autostart {
-				StartProgram(&daemon)
+				StartProgram(program, &daemon)
 			}
 		}
 	}

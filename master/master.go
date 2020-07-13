@@ -12,13 +12,15 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 			select {
 			case e := <-daemon.Err:
 				if e != nil {
-					tasks.Register(daemon, date, "Exited ("+e.Error()+")")
+					tasks.Register(daemon, "Exited ("+e.Error()+")")
 				} else {
-					tasks.Register(daemon, date, "Exited ("+"Success"+")")
+					tasks.Register(daemon, "Exited ("+"Success"+")")
 				}
-				daemon.Running = false
+				daemon.Stop()
 			default:
 			}
+
+			cfg := programs_cfg[daemon.Name]
 		}
 	}
 }
