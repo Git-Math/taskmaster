@@ -22,6 +22,12 @@ type Daemon struct {
 
 var Daemons []*Daemon
 
+var second_to_milisecond = int64(1000)
+
+func CurrentTimeMillisecond() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
 func Register(daemon *Daemon, date time.Time, msg string) {
 	registerFile, err := os.OpenFile("register.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
