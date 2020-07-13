@@ -35,10 +35,6 @@ func (dae *Daemon) Start() error {
 	return nil
 }
 
-func (dae *Daemon) Run() {
-	dae.Running = true
-}
-
 func (dae *Daemon) Stop() {
 	dae.Running = false
 	dae.StartTime = 0
@@ -67,11 +63,12 @@ func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 				time.Sleep(time.Duration(startTime) * time.Second)
 				if !daemon.Command.ProcessState.Exited() {
 					Register(daemon, "Started")
-					daemon.Run()
+					daemon.Running = true
 					return
 				}
 				daemon.Stop()
 			}
+			/* FIXME: what if the program exited successfully already ? */
 			if retrieCount == 0 {
 				Register(daemon, "Failed to start after"+string(startTime)+"times")
 				break

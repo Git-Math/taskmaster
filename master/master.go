@@ -1,6 +1,7 @@
 package master
 
 import (
+	"fmt"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"time"
@@ -21,6 +22,10 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 			}
 
 			cfg := programs_cfg[daemon.Name]
+			switch cfg.Autorestart {
+			default:
+				fmt.Println(date)
+			}
 		}
 	}
 }
