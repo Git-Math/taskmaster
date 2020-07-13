@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var second_to_milisecond = int64(1000)
+var SecondToMillisecond = int64(1000)
 
 func CurrentTimeMillisecond() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
