@@ -29,4 +29,4 @@ programs:
              - 0
          startretries: 3
          starttime: 5
-         stopsignal: USR1st
+         stopsignal: USR1
