@@ -100,7 +100,7 @@ func main() {
 	program_map := parse_yaml.ParseYaml(os.Args[1])
 
 	tasks.Execute(program_map)
-	go master.Watch()
+	go master.Watch(program_map)
 
 	term.Init()
 

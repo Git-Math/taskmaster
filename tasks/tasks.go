@@ -14,24 +14,39 @@ type Daemon struct {
 	Name           string
 	Command        *exec.Cmd
 	StartTimestamp time.Time
-	Restart        int
-	err            chan error
+	Running        bool
+	StartTime      int64
+	StartRepeat    int
+	Err            chan error
 }
 
-var Daemons []Daemon
+var Daemons []*Daemon
 
-func StartProgram(daemon Daemon) {
-	daemon.err <- daemon.Command.Run()
-	select {
-	default:
-		fmt.Println("process is running")
-	case e := <-daemon.err:
-		if e != nil {
-			fmt.Println("process exited: ", e)
-		} else {
-			fmt.Println("process exited successfully")
-		}
+func Register(daemon *Daemon, date time.Time, msg string) {
+	registerFile, err := os.OpenFile("register.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer registerFile.Close()
+
+	fmt.Fprintln(registerFile, date, "[", daemon.Name, "]", msg)
+}
+
+func StartProgram(daemon *Daemon) {
+	go func() {
+		date := time.Now()
+
+		err := daemon.Command.Start()
+		if err != nil {
+			Register(daemon, date, "Failed to start")
+			return
+		}
+		Register(daemon, date, "Started")
+		daemon.Running = true
+		daemon.Err = make(chan error)
+		daemon.Err <- daemon.Command.Run()
+	}()
+
 }
 
 func Execute(program_map parse_yaml.ProgramMap) {
@@ -41,7 +56,6 @@ func Execute(program_map parse_yaml.ProgramMap) {
 			var daemon Daemon
 
 			daemon.Name = key
-			daemon.Restart = 0
 
 			command_parts := strings.Fields(program.Cmd)
 			if len(command_parts) > 1 {
@@ -76,11 +90,11 @@ func Execute(program_map parse_yaml.ProgramMap) {
 				daemon.Command.Stderr = nil
 			}
 
-			if program.Autostart {
-				StartProgram(daemon)
-			}
+			Daemons = append(Daemons, &daemon)
 
-			Daemons = append(Daemons, daemon)
+			if program.Autostart {
+				StartProgram(&daemon)
+			}
 		}
 	}
 }
