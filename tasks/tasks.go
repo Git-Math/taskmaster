@@ -10,8 +10,10 @@ import (
 	"time"
 )
 
-func CurrentTime() int64 {
-	return 1000
+var second_to_milisecond = int64(1000)
+
+func CurrentTimeMillisecond() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
 type Daemon struct {
@@ -45,7 +47,7 @@ func (dae *Daemon) Stop() {
 var Daemons []*Daemon
 
 func Register(daemon *Daemon, msg string) {
-	date := CurrentTime()
+	date := CurrentTimeMillisecond()
 	registerFile, err := os.OpenFile("register.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -61,7 +63,7 @@ func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 		for {
 			err := daemon.Start()
 			if err != nil {
-				daemon.StartTime = CurrentTime()
+				daemon.StartTime = CurrentTimeMillisecond()
 				time.Sleep(time.Duration(startTime) * time.Second)
 				if !daemon.Command.ProcessState.Exited() {
 					Register(daemon, "Started")
