@@ -1,9 +1,9 @@
 package parse_yaml
 
 import (
+	"errors"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
-	"log"
 	"syscall"
 )
 
@@ -52,32 +52,36 @@ type ProgramsStruct struct {
 	Programs ProgramMap `yaml:"programs"`
 }
 
-func CheckYaml(program_map ProgramMap) {
+func CheckYaml(program_map ProgramMap) error {
 	for key, program := range program_map {
 		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
-			log.Fatalln("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]")
+			return errors.New("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]\n")
 		}
 
 		if _, key_exist := SignalMap[program.Stopsignal]; !key_exist {
-			log.Fatalln("Program " + key + ": invalid stopsignal value: [" + program.Stopsignal + "]")
+			return errors.New("Program " + key + ": invalid stopsignal value: [" + program.Stopsignal + "]\n")
 		}
 	}
+	return nil
 }
 
-func ParseYaml(yamlfile string) ProgramMap {
+func ParseYaml(yamlfile string) (ProgramMap, error) {
 	var programs_struct ProgramsStruct
 
 	yaml_data, err := ioutil.ReadFile(yamlfile)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	err = yaml.Unmarshal(yaml_data, &programs_struct)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	CheckYaml(programs_struct.Programs)
+	err = CheckYaml(programs_struct.Programs)
+	if err != nil {
+		return nil, err
+	}
 
-	return programs_struct.Programs
+	return programs_struct.Programs, nil
 }
