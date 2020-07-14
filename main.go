@@ -8,6 +8,7 @@ import (
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"taskmaster/term"
+	"time"
 )
 
 func usage() {
@@ -48,8 +49,24 @@ func reload_config() {
 	fmt.Println("reload_config")
 }
 
-func exit() {
-	fmt.Println("exit")
+func IsDaemonRunning() bool {
+	for _, daemon := range tasks.Daemons {
+		if daemon.Running {
+			return true
+		}
+	}
+	return false
+}
+
+func exit(program_map parse_yaml.ProgramMap) {
+	for key, cfg := range program_map {
+		stop(key, cfg)
+	}
+
+	for IsDaemonRunning() {
+		time.Sleep(time.Duration(1) * time.Second)
+	}
+	os.Exit(0)
 }
 
 func call_func(text string, program_map parse_yaml.ProgramMap) {
@@ -103,7 +120,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 	case "reload_config":
 		reload_config()
 	case "exit":
-		exit()
+		exit(program_map)
 	default:
 		fmt.Println("command not found:", cmd)
 	}
