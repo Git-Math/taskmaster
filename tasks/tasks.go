@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"taskmaster/parse_yaml"
 	"time"
@@ -21,23 +22,34 @@ type Daemon struct {
 	Command   *exec.Cmd  /* Cmd */
 	StartTime int64      /* Start Time of the program */
 	Running   bool       /* Indicate that the program has been running long enough to say it's running */
+	ExitCode  int        /* Exit Code of the program or -1 */
 	Err       chan error /* Channel to the goroutine waiting for the program to return */
 }
 
 func (dae *Daemon) Start() error {
+	dae.reset()
 	err := dae.Command.Start()
 	if err != nil {
 		return err
 	}
-	dae.Running = false
 	dae.Err = make(chan error)
 	dae.Err <- dae.Command.Run()
 	return nil
 }
 
 func (dae *Daemon) Stop() {
-	dae.Running = false
+	if !dae.Command.ProcessState.Exited() {
+		log.Fatal("Called Stop() but process `" + dae.Name + "'did not exit")
+	}
+	dae.reset()
+	dae.ExitCode = dae.Command.ProcessState.ExitCode()
+}
+
+func (dae *Daemon) reset() {
 	dae.StartTime = 0
+	dae.Running = false
+	dae.ExitCode = -1
+	dae.Err = nil
 }
 
 var Daemons []*Daemon
@@ -58,7 +70,7 @@ func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 	startDaemon := func(retrieCount int, startTime int) {
 		for {
 			err := daemon.Start()
-			if err != nil {
+			if err == nil {
 				daemon.StartTime = CurrentTimeMillisecond()
 				time.Sleep(time.Duration(startTime) * time.Second)
 				if !daemon.Command.ProcessState.Exited() {
@@ -66,11 +78,16 @@ func StartProgram(cfg parse_yaml.Program, daemon *Daemon) {
 					daemon.Running = true
 					return
 				}
-				daemon.Stop()
+				daemon.reset()
 			}
 			/* FIXME: what if the program exited successfully already ? */
 			if retrieCount == 0 {
-				Register(daemon, "Failed to start after"+string(startTime)+"times")
+				fmt.Println("Start time=", startTime)
+				msg := "Failed to start after " + strconv.Itoa(startTime) + " times"
+				if err != nil {
+					msg += ": " + err.Error()
+				}
+				Register(daemon, msg)
 				break
 			} else {
 				retrieCount--
