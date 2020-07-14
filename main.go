@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"taskmaster/master"
@@ -28,11 +29,24 @@ func start(name string, cfg parse_yaml.Program) {
 	tasks.StartProgram(name, cfg)
 }
 
+func IsDaemonNameRunning(name string) bool {
+	for _, daemon := range tasks.Daemons {
+		if daemon.Name == name && daemon.Running {
+			return true
+		}
+	}
+	return false
+}
+
 func stop(program_name string, cfg parse_yaml.Program) {
 	for _, daemon := range tasks.Daemons {
 		if daemon.Name == program_name && daemon.Running {
 			tasks.StopProgram(cfg, daemon)
 		}
+	}
+
+	for IsDaemonNameRunning(program_name) {
+		time.Sleep(time.Duration(1) * time.Second)
 	}
 }
 
@@ -41,8 +55,24 @@ func restart(program_name string, cfg parse_yaml.Program) {
 	start(program_name, cfg)
 }
 
-func reload_config() {
-	fmt.Println("reload_config")
+func RemoveProgram(program_name string, cfg parse_yaml.Program) {
+	stop(program_name, cfg)
+}
+
+func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
+	new_program_map, err := parse_yaml.ParseYaml(cfg_yaml)
+	if err != nil {
+		fmt.Print(err)
+		return program_map
+	}
+
+	for key, cfg := range program_map {
+		if _, key_exist := new_program_map[key]; !key_exist {
+			RemoveProgram(key, cfg)
+		}
+	}
+
+	return new_program_map
 }
 
 func IsDaemonRunning() bool {
@@ -56,7 +86,9 @@ func IsDaemonRunning() bool {
 
 func exit(program_map parse_yaml.ProgramMap) {
 	for key, cfg := range program_map {
-		stop(key, cfg)
+		go func() {
+			stop(key, cfg)
+		}()
 	}
 
 	for IsDaemonRunning() {
@@ -65,7 +97,7 @@ func exit(program_map parse_yaml.ProgramMap) {
 	os.Exit(0)
 }
 
-func call_func(text string, program_map parse_yaml.ProgramMap) {
+func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) {
 	text_list := strings.Fields(text)
 
 	if len(text_list) == 0 {
@@ -114,7 +146,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap) {
 			}
 		}
 	case "reload_config":
-		reload_config()
+		program_map = reload_config(program_map, cfg_yaml)
 	case "exit":
 		exit(program_map)
 	default:
@@ -131,7 +163,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	program_map := parse_yaml.ParseYaml(os.Args[1])
+	cfg_yaml := os.Args[1]
+
+	program_map, err := parse_yaml.ParseYaml(cfg_yaml)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	for name, program := range program_map {
 		tasks.Add(name, program)
 		if program.Autostart {
@@ -145,6 +183,6 @@ func main() {
 
 	for {
 		text := term.ReadLine()
-		call_func(text, program_map)
+		call_func(text, program_map, cfg_yaml)
 	}
 }
