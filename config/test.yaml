@@ -1,0 +1,17 @@
+programs:
+    instant-crash:
+        cmd: "/home/arthour/go/src/taskmaster/programs/instant-crash"
+        numprocs: 1
+        umask: 077
+        workingdir: ./tmp
+        autostart: true
+        autorestart: unexpected
+        exitcodes:
+            - 0
+        startretries: 2
+        starttime: 5
+        stopsignal: TERM
+        stoptime: 5
+        stdout: ./tmp/instant-crash.stdout
+        stderr: ./tmp/instant-crash.stderr
+        env:
