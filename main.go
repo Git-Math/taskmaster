@@ -24,12 +24,8 @@ func status(program_map parse_yaml.ProgramMap) {
 	fmt.Println("status:", program_map)
 }
 
-func start(program_name string, cfg parse_yaml.Program) {
-	for _, daemon := range tasks.Daemons {
-		if daemon.Name == program_name && !daemon.Running {
-			tasks.StartProgram(cfg, daemon)
-		}
-	}
+func start(name string, cfg parse_yaml.Program) {
+	tasks.StartProgram(name, cfg)
 }
 
 func stop(program_name string, cfg parse_yaml.Program) {
@@ -136,8 +132,13 @@ func main() {
 	}
 
 	program_map := parse_yaml.ParseYaml(os.Args[1])
+	for name, program := range program_map {
+		tasks.Add(name, program)
+		if program.Autostart {
+			tasks.StartProgram(name, program)
+		}
+	}
 
-	tasks.Execute(program_map)
 	go master.Watch(program_map)
 
 	term.Init()

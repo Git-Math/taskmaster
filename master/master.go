@@ -1,45 +1,86 @@
 package master
 
 import (
+	"fmt"
+	"strconv"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"time"
 )
 
 func Watch(programs_cfg parse_yaml.ProgramMap) {
-	for range time.Tick(2000 * time.Millisecond) {
+	for range time.Tick(1000 * time.Millisecond) {
 		for _, daemon := range tasks.Daemons {
+			if daemon.Dead {
+				continue
+			}
+
+			cfg := programs_cfg[daemon.Name]
+			uptime := (tasks.CurrentTimeMillisecond() - daemon.StartTime) / 1000
+			exited := false
+			var err error = nil
+
 			select {
-			case e := <-daemon.Err:
-				if e != nil {
-					tasks.Register(daemon, "Exited ("+e.Error()+")")
-				} else {
-					tasks.Register(daemon, "Exited ("+"Success"+")")
-				}
-				daemon.Stop()
+			case err = <-daemon.Err:
+				exited = true
 			default:
 			}
 
-			if !daemon.Running {
-				cfg := programs_cfg[daemon.Name]
+			fmt.Println("uptime=", uptime, "Starttime=", cfg.Starttime, "exited=", exited)
+			/* daemon exited before StartTime, check if it needs restarting */
+			if uptime < int64(cfg.Starttime) && exited {
+				if daemon.StartRetries == cfg.Startretries {
+					msg := "Failed to start after " + strconv.Itoa(cfg.Startretries) + " times"
+					if err != nil {
+						msg += ": " + err.Error()
+					}
+					tasks.Register(daemon, msg)
+					daemon.Dead = true
+				}
+				if daemon.StartRetries < cfg.Startretries {
+					go daemon.Start(cfg)
+				}
+				continue
+			}
+
+			/* daemon just passed StartTime */
+			if uptime >= int64(cfg.Starttime) && daemon.Running && !exited {
+				tasks.Register(daemon, "Started")
+				daemon.Running = true
+			}
+
+			if exited {
+				if err != nil {
+					tasks.Register(daemon, "Exited ("+err.Error()+")")
+				} else {
+					tasks.Register(daemon, "Exited ("+"Success"+")")
+				}
+
+				restart := false
 				switch cfg.Autorestart {
 				case "unexpected":
-					restart := true
+					success := false
 					for exitSuccess := range cfg.Exitcodes {
 						if exitSuccess == daemon.ExitCode {
-							restart = false
+							success = true
 							break
 						}
 					}
-					if restart {
-						tasks.StartProgram(cfg, daemon)
+					if !success {
+						restart = true
 					}
 				case "always":
-					tasks.StartProgram(cfg, daemon)
+					restart = true
 				case "never":
 				}
 
+				if restart {
+					go daemon.Start(cfg)
+				} else {
+					daemon.Dead = true
+				}
 			}
+
 		}
 	}
 }
