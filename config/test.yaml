@@ -15,3 +15,35 @@ programs:
         stdout: ./tmp/instant-crash.stdout
         stderr: ./tmp/instant-crash.stderr
         env:
+    loop-print:
+        cmd: "/home/arthour/go/src/taskmaster/programs/loop-print"
+        numprocs: 1
+        umask: 077
+        workingdir: ./tmp
+        autostart: true
+        autorestart: unexpected
+        exitcodes:
+            - 0
+        startretries: 2
+        starttime: 5
+        stopsignal: TERM
+        stoptime: 5
+        stdout: ./tmp/loop-print.stdout
+        stderr: ./tmp/loop-print.stderr
+        env:
+    wait-5sec-and-exit-success:
+        cmd: "/home/arthour/go/src/taskmaster/programs/wait-5sec-and-exit-success"
+        numprocs: 1
+        umask: 077
+        workingdir: ./tmp
+        autostart: true
+        autorestart: unexpected
+        exitcodes:
+            - 0
+        startretries: 2
+        starttime: 5
+        stopsignal: TERM
+        stoptime: 5
+        stdout: ./tmp/wait-5sec-and-exit-success.stdout
+        stderr: ./tmp/wait-5sec-and-exit-success.stderr
+        env:
