@@ -99,13 +99,11 @@ func (dae *Daemon) Reset() {
 	dae.ExitCode = -1
 }
 
-var Daemons []*Daemon
+var Daemons = make(map[string]([]*Daemon))
 
 func StartProgram(name string, cfg parse_yaml.Program) {
-	for _, daemon := range Daemons {
-		if daemon.Name == name {
-			go daemon.Start(cfg)
-		}
+	for _, daemon := range Daemons[name] {
+		go daemon.Start(cfg)
 	}
 }
 
@@ -121,10 +119,11 @@ func StopProgram(cfg parse_yaml.Program, daemon *Daemon) {
 }
 
 func Add(name string, cfg parse_yaml.Program) {
+	Daemons[name] = []*Daemon{}
 	for i := 0; i < cfg.Numprocs; i++ {
 		var daemon Daemon
 
 		daemon.Name = name
-		Daemons = append(Daemons, &daemon)
+		Daemons[name] = append(Daemons[name], &daemon)
 	}
 }

@@ -30,22 +30,22 @@ func start(name string, cfg parse_yaml.Program) {
 }
 
 func IsDaemonNameRunning(name string) bool {
-	for _, daemon := range tasks.Daemons {
-		if daemon.Name == name && daemon.Running {
+	for _, daemon := range tasks.Daemons[name] {
+		if daemon.Running {
 			return true
 		}
 	}
 	return false
 }
 
-func stop(program_name string, cfg parse_yaml.Program) {
-	for _, daemon := range tasks.Daemons {
-		if daemon.Name == program_name && daemon.Running {
+func stop(name string, cfg parse_yaml.Program) {
+	for _, daemon := range tasks.Daemons[name] {
+		if daemon.Running {
 			tasks.StopProgram(cfg, daemon)
 		}
 	}
 
-	for IsDaemonNameRunning(program_name) {
+	for IsDaemonNameRunning(name) {
 		time.Sleep(time.Duration(1) * time.Second)
 	}
 }
@@ -76,9 +76,11 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 }
 
 func IsDaemonRunning() bool {
-	for _, daemon := range tasks.Daemons {
-		if daemon.Running {
-			return true
+	for _, daemons := range tasks.Daemons {
+		for _, daemon := range daemons {
+			if daemon.Running {
+				return true
+			}
 		}
 	}
 	return false
