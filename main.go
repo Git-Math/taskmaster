@@ -5,11 +5,11 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"taskmaster/master"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"taskmaster/term"
-	"time"
 )
 
 func usage() {
@@ -29,25 +29,22 @@ func start(name string, cfg parse_yaml.Program) {
 	tasks.StartProgram(name, cfg)
 }
 
-func IsDaemonNameRunning(name string) bool {
-	for _, daemon := range tasks.Daemons[name] {
-		if daemon.Running {
-			return true
+func stop(program_name string, cfg parse_yaml.Program) {
+	var wg sync.WaitGroup
+
+	daemons := tasks.DaemonRetrieve(program_name)
+	wg.Add(len(daemons))
+
+	for _, daemon := range daemons {
+		if daemon != nil && daemon.IsRunning() {
+			go func() {
+				defer wg.Done()
+				tasks.StopProgram(cfg, daemon)
+			}()
 		}
 	}
-	return false
-}
 
-func stop(name string, cfg parse_yaml.Program) {
-	for _, daemon := range tasks.Daemons[name] {
-		if daemon.Running {
-			tasks.StopProgram(cfg, daemon)
-		}
-	}
-
-	for IsDaemonNameRunning(name) {
-		time.Sleep(time.Duration(1) * time.Second)
-	}
+	wg.Wait()
 }
 
 func restart(program_name string, cfg parse_yaml.Program) {
@@ -75,27 +72,19 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 	return new_program_map
 }
 
-func IsDaemonRunning() bool {
-	for _, daemons := range tasks.Daemons {
-		for _, daemon := range daemons {
-			if daemon.Running {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func exit(program_map parse_yaml.ProgramMap) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(program_map))
+
 	for key, cfg := range program_map {
 		go func() {
+			defer wg.Done()
 			stop(key, cfg)
 		}()
 	}
 
-	for IsDaemonRunning() {
-		time.Sleep(time.Duration(1) * time.Second)
-	}
+	wg.Wait()
 	os.Exit(0)
 }
 

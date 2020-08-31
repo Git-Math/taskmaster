@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"taskmaster/parse_yaml"
 	"time"
 )
@@ -45,6 +46,18 @@ type Daemon struct {
 	Running      bool       /* Indicate that the program has been running long enough to say it's running */
 	ExitCode     int        /* Exit Code of the program or -1 */
 	Err          chan error /* Channel to the goroutine waiting for the program to return */
+}
+
+var Mutex sync.Mutex
+var Daemons = make(map[string]([]*Daemon))
+
+func DaemonRetrieve(name string) []*Daemon {
+	for _, daemons := range Daemons {
+		if daemons[0].Name == name {
+			return daemons
+		}
+	}
+	return nil
 }
 
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
@@ -99,7 +112,12 @@ func (dae *Daemon) Reset() {
 	dae.ExitCode = -1
 }
 
-var Daemons = make(map[string]([]*Daemon))
+func (dae *Daemon) IsRunning() bool {
+	Mutex.Lock()
+	running := dae.Running
+	Mutex.Unlock()
+	return running
+}
 
 func StartProgram(name string, cfg parse_yaml.Program) {
 	for _, daemon := range Daemons[name] {
@@ -108,14 +126,19 @@ func StartProgram(name string, cfg parse_yaml.Program) {
 }
 
 func StopProgram(cfg parse_yaml.Program, daemon *Daemon) {
-	go func() {
-		daemon.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
-		time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
-		if daemon.Running {
-			daemon.Command.Process.Kill()
-		}
-		daemon.Stop()
-	}()
+	Mutex.Lock()
+	daemon.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
+	Mutex.Unlock()
+
+	time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
+
+	Mutex.Lock()
+	if daemon.Running {
+		daemon.Command.Process.Kill()
+	}
+	Mutex.Unlock()
+
+	daemon.Stop()
 }
 
 func Add(name string, cfg parse_yaml.Program) {

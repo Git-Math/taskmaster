@@ -1,7 +1,6 @@
 package master
 
 import (
-	"fmt"
 	"strconv"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
@@ -27,7 +26,6 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 				default:
 				}
 
-				fmt.Println("uptime=", uptime, "Starttime=", cfg.Starttime, "exited=", exited)
 				/* daemon exited before StartTime, check if it needs restarting */
 				if uptime < int64(cfg.Starttime) && exited {
 					if daemon.StartRetries == cfg.Startretries {
@@ -55,6 +53,7 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 						tasks.Register(daemon, "Exited ("+err.Error()+")")
 					} else {
 						tasks.Register(daemon, "Exited ("+"Success"+")")
+						daemon.ExitCode = 0
 					}
 
 					restart := false
