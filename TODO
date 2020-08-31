@@ -1,0 +1,4 @@
+- chmod umask
+- "stop" trigger a segfault
+- reload config file
+- use logs (info, debug, ...) instead of commented fmt.Println
