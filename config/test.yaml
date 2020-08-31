@@ -11,7 +11,7 @@ programs:
         startretries: 2
         starttime: 5
         stopsignal: TERM
-        stoptime: 5
+        stoptime: 1
         stdout: ./tmp/instant-crash.stdout
         stderr: ./tmp/instant-crash.stderr
         env:
@@ -27,7 +27,7 @@ programs:
         startretries: 2
         starttime: 5
         stopsignal: TERM
-        stoptime: 5
+        stoptime: 1
         stdout: ./tmp/loop-print.stdout
         stderr: ./tmp/loop-print.stderr
         env:
@@ -43,7 +43,7 @@ programs:
         startretries: 2
         starttime: 5
         stopsignal: TERM
-        stoptime: 5
+        stoptime: 1
         stdout: ./tmp/wait-5sec-and-exit-success.stdout
         stderr: ./tmp/wait-5sec-and-exit-success.stderr
         env:
