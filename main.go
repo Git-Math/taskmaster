@@ -29,22 +29,8 @@ func start(name string, cfg parse_yaml.Program) {
 	tasks.StartProgram(name, cfg)
 }
 
-func stop(program_name string, cfg parse_yaml.Program) {
-	var wg sync.WaitGroup
-
-	daemons := tasks.DaemonRetrieve(program_name)
-	wg.Add(len(daemons))
-
-	for _, daemon := range daemons {
-		if daemon != nil && daemon.IsRunning() {
-			go func() {
-				defer wg.Done()
-				tasks.StopProgram(cfg, daemon)
-			}()
-		}
-	}
-
-	wg.Wait()
+func stop(name string, cfg parse_yaml.Program) {
+	tasks.StopProgram(name, cfg)
 }
 
 func restart(program_name string, cfg parse_yaml.Program) {

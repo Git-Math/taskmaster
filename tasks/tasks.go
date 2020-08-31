@@ -40,15 +40,15 @@ func Register(daemon *Daemon, msg string) {
 type Daemon struct {
 	Name         string     /* name of the program from the yaml */
 	Command      *exec.Cmd  /* Cmd */
-	Dead         bool       /* Indicate that the daemon is dead */
+	NoRestart    bool       /* Indicate that the daemon is dead */
 	StartTime    int64      /* Start Time of the program */
 	StartRetries int        /* Count of time the program was restarted because it stopped before Starttime */
 	Running      bool       /* Indicate that the program has been running long enough to say it's running */
 	ExitCode     int        /* Exit Code of the program or -1 */
 	Err          chan error /* Channel to the goroutine waiting for the program to return */
+	mut          sync.Mutex
 }
 
-var Mutex sync.Mutex
 var Daemons = make(map[string]([]*Daemon))
 
 func DaemonRetrieve(name string) []*Daemon {
@@ -60,8 +60,23 @@ func DaemonRetrieve(name string) []*Daemon {
 	return nil
 }
 
+func (dae *Daemon) Lock() {
+	// fmt.Println("locking", dae.Name)
+	dae.mut.Lock()
+	// fmt.Println("locked", dae.Name)
+}
+
+func (dae *Daemon) Unlock() {
+	// fmt.Println("unlocking", dae.Name)
+	dae.mut.Unlock()
+	// fmt.Println("unlocked", dae.Name)
+}
+
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
-	dae.Reset()
+	// fmt.Println("Start daemon", cfg.Cmd)
+	dae.Lock()
+
+	dae.reset()
 
 	command_parts := strings.Fields(cfg.Cmd)
 	if len(command_parts) > 1 {
@@ -95,28 +110,24 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 
 	dae.StartRetries++
 	dae.StartTime = CurrentTimeMillisecond()
+
+	dae.Unlock()
+
 	dae.Err = make(chan error)
 	dae.Err <- dae.Command.Run()
 }
 
-func (dae *Daemon) Stop() {
+func (dae *Daemon) stop() {
 	if !dae.Command.ProcessState.Exited() {
 		log.Fatal("dev: Called daemon.Stop before process `" + dae.Name + "' exited")
 	}
-	dae.Reset()
+	dae.reset()
 	dae.ExitCode = dae.Command.ProcessState.ExitCode()
 }
 
-func (dae *Daemon) Reset() {
+func (dae *Daemon) reset() {
 	dae.Running = false
 	dae.ExitCode = -1
-}
-
-func (dae *Daemon) IsRunning() bool {
-	Mutex.Lock()
-	running := dae.Running
-	Mutex.Unlock()
-	return running
 }
 
 func StartProgram(name string, cfg parse_yaml.Program) {
@@ -125,28 +136,46 @@ func StartProgram(name string, cfg parse_yaml.Program) {
 	}
 }
 
-func StopProgram(cfg parse_yaml.Program, daemon *Daemon) {
-	Mutex.Lock()
-	daemon.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
-	Mutex.Unlock()
+func StopProgram(program_name string, cfg parse_yaml.Program) {
+	var wg sync.WaitGroup
 
-	time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
+	daemons := DaemonRetrieve(program_name)
+	for _, dae := range daemons {
+		dae.Lock()
+		running := dae.Running
+		dae.Unlock()
+		fmt.Println("Stopping", program_name, "running=", running)
+		if running {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 
-	Mutex.Lock()
-	if daemon.Running {
-		daemon.Command.Process.Kill()
+				fmt.Println(dae.Name, "stopping ...")
+
+				dae.Lock()
+				dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
+				dae.Unlock()
+
+				time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
+
+				dae.Lock()
+				if dae.Running {
+					dae.Command.Process.Kill()
+				}
+				dae.stop()
+				dae.Unlock()
+			}()
+		}
 	}
-	Mutex.Unlock()
-
-	daemon.Stop()
+	wg.Wait()
 }
 
 func Add(name string, cfg parse_yaml.Program) {
 	Daemons[name] = []*Daemon{}
 	for i := 0; i < cfg.Numprocs; i++ {
-		var daemon Daemon
+		var dae Daemon
 
-		daemon.Name = name
-		Daemons[name] = append(Daemons[name], &daemon)
+		dae.Name = name
+		Daemons[name] = append(Daemons[name], &dae)
 	}
 }
