@@ -15,11 +15,12 @@ import (
 )
 
 func usage() {
-	fmt.Println("usage:", os.Args[0], "[-h] yamlfile")
+	fmt.Println("usage:", os.Args[0], "[-h|-v] yamlfile")
 	fmt.Println()
 	fmt.Println("positional argument:")
 	fmt.Println("  yamlfile:                  yaml config for programs")
 	fmt.Println()
+	fmt.Println("  -v                         verbose in stdout")
 	fmt.Println("  -h, --help                 show this help message and exit")
 }
 
