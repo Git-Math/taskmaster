@@ -10,6 +10,7 @@ import (
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"taskmaster/term"
+	"time"
 )
 
 func usage() {
@@ -22,7 +23,18 @@ func usage() {
 }
 
 func status(program_map parse_yaml.ProgramMap) {
-	fmt.Println("status:", program_map)
+	for name, daemons := range tasks.Daemons {
+		fmt.Println("Program name:", name)
+		fmt.Println("Cmd:         ", program_map[name].Cmd)
+		for i, daemon := range daemons {
+			fmt.Printf("    Process %d:\n", i)
+			fmt.Println("        No restart:   ", daemon.NoRestart)
+			fmt.Println("        Start time:   ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
+			fmt.Println("        Start retries:", daemon.StartRetries)
+			fmt.Println("        Running:      ", daemon.Running)
+			fmt.Println("        Exit code:    ", daemon.ExitCode)
+		}
+	}
 }
 
 func start(name string, cfg parse_yaml.Program) {
