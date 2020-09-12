@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
+	l "log"
 	"os"
 	"strings"
 	"sync"
-	"taskmaster/debug"
+	"taskmaster/log"
 	"taskmaster/master"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
@@ -149,7 +149,7 @@ func main() {
 	var cfg_yaml string
 	if len(os.Args) == 3 {
 		if os.Args[1] == "-v" {
-			debug.DebugLog = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+			log.Debug = l.New(os.Stdout, "DEBUG: ", l.Ldate|l.Ltime|l.Lshortfile)
 			cfg_yaml = os.Args[2]
 		} else {
 			usage()
@@ -164,15 +164,15 @@ func main() {
 	} else {
 		file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
-		debug.DebugLog = log.New(file, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+		log.Debug = l.New(file, "DEBUG: ", l.Ldate|l.Ltime|l.Lshortfile)
 		cfg_yaml = os.Args[1]
 	}
 
 	program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
-		log.Fatal(err)
+		l.Fatal(err)
 	}
 
 	for name, program := range program_map {

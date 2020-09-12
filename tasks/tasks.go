@@ -3,13 +3,13 @@ package tasks
 import (
 	"fmt"
 	"io"
-	"log"
+	l "log"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
-	"taskmaster/debug"
+	"taskmaster/log"
 	"taskmaster/parse_yaml"
 	"time"
 )
@@ -30,11 +30,11 @@ func Register(daemon *Daemon, msg string) {
 
 		registerFile, err = os.Create("register.log")
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 	}
 	fmt.Fprintln(registerFile, CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
-	fmt.Println(CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
+	log.Debug.Println(CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
 }
 
 /* }}} */
@@ -63,15 +63,15 @@ func DaemonRetrieve(name string) []*Daemon {
 }
 
 func (dae *Daemon) Lock() {
-	debug.DebugLog.Println("locking", dae.Name)
+	log.Debug.Println("locking", dae.Name)
 	dae.mut.Lock()
-	debug.DebugLog.Println("locked", dae.Name)
+	log.Debug.Println("locked", dae.Name)
 }
 
 func (dae *Daemon) Unlock() {
-	debug.DebugLog.Println("unlocking", dae.Name)
+	log.Debug.Println("unlocking", dae.Name)
 	dae.mut.Unlock()
-	debug.DebugLog.Println("unlocked", dae.Name)
+	log.Debug.Println("unlocked", dae.Name)
 }
 
 func (dae *Daemon) reset() {
@@ -91,7 +91,7 @@ func (dae *Daemon) Init() {
 }
 
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
-	debug.DebugLog.Println("Start daemon", cfg.Cmd)
+	log.Debug.Println("Start daemon", cfg.Cmd)
 	dae.Lock()
 
 	command_parts := strings.Fields(cfg.Cmd)
@@ -107,7 +107,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stdout != "" {
 		outfile, err := os.Create(cfg.Stdout)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 		dae.Command.Stdout = outfile
 	} else {
@@ -117,7 +117,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stderr != "" {
 		errfile, err := os.Create(cfg.Stderr)
 		if err != nil {
-			log.Fatal(err)
+			l.Fatal(err)
 		}
 		dae.Command.Stderr = errfile
 	} else {
@@ -139,7 +139,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 
 func (dae *Daemon) stop() {
 	if !dae.Command.ProcessState.Exited() {
-		log.Fatal("dev: Called daemon.Stop before process `" + dae.Name + "' exited")
+		l.Fatal("dev: Called daemon.Stop before process `" + dae.Name + "' exited")
 	}
 	dae.ExitCode = dae.Command.ProcessState.ExitCode()
 }
@@ -159,20 +159,20 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 		dae.Lock()
 		running := dae.Running
 		dae.Unlock()
-		fmt.Println("Stopping", program_name, "running=", running)
+		log.Debug.Println("Stopping", program_name, "running=", running)
 		if running {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 
-				fmt.Println(dae.Name, "stopping ...")
+				log.Debug.Println(dae.Name, "stopping ...")
 
 				dae.Lock()
 				err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
 				if err != nil {
-					fmt.Println(dae.Name, ": failed to stop program cleanly:", err)
+					log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
 					if err = dae.Command.Process.Kill(); err != nil {
-						fmt.Println(dae.Name, ": failed to stop program:", err)
+						log.Debug.Println(dae.Name, ": failed to stop program:", err)
 						dae.Unlock()
 						return
 					}
@@ -180,7 +180,7 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 				dae.NoRestart = true
 				dae.Unlock()
 
-				fmt.Println(dae.Name, "stopped")
+				log.Debug.Println(dae.Name, "stopped")
 			}()
 		}
 	}

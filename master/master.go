@@ -1,8 +1,8 @@
 package master
 
 import (
-	"fmt"
 	"strconv"
+	"taskmaster/log"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"time"
@@ -33,12 +33,12 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	default:
 	}
 
-	fmt.Println("COUCOU: uptime =", uptime, "start-time =", cfg.Starttime)
+	log.Debug.Println(dae.Name, "uptime =", uptime, "start-time =", cfg.Starttime)
 
 	if exited && uptime < int64(cfg.Starttime) {
 		/* dae exited before StartTime, check if it needs restarting */
+		log.Debug.Println(dae.Name, "exited=", exited, "startRetries=", dae.StartRetries, "max=", cfg.Startretries)
 
-		fmt.Println("COUCOU: exited=", exited, "startRetries=", dae.StartRetries, "max=", cfg.Startretries)
 		if dae.StartRetries == cfg.Startretries {
 			msg := "Failed to start after " + strconv.Itoa(cfg.Startretries) + " times"
 			if err != nil {
@@ -108,9 +108,9 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 				cfg := programs_cfg[daemon.Name]
 
 				if !daemon.NoRestart {
-					fmt.Println("Watching for daemon", daemon.Name)
+					log.Debug.Println("Watching for daemon", daemon.Name)
 					watchDaemon(daemon, cfg)
-					fmt.Println("Watching for daemon", daemon.Name, "returned")
+					log.Debug.Println("Watching for daemon", daemon.Name, "returned")
 				}
 			}
 		}
