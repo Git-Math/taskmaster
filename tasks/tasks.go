@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"taskmaster/debug"
 	"taskmaster/parse_yaml"
 	"time"
 )
@@ -62,15 +63,15 @@ func DaemonRetrieve(name string) []*Daemon {
 }
 
 func (dae *Daemon) Lock() {
-	// fmt.Println("locking", dae.Name)
+	debug.DebugLog.Println("locking", dae.Name)
 	dae.mut.Lock()
-	// fmt.Println("locked", dae.Name)
+	debug.DebugLog.Println("locked", dae.Name)
 }
 
 func (dae *Daemon) Unlock() {
-	// fmt.Println("unlocking", dae.Name)
+	debug.DebugLog.Println("unlocking", dae.Name)
 	dae.mut.Unlock()
-	// fmt.Println("unlocked", dae.Name)
+	debug.DebugLog.Println("unlocked", dae.Name)
 }
 
 func (dae *Daemon) reset() {
@@ -90,7 +91,7 @@ func (dae *Daemon) Init() {
 }
 
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
-	// fmt.Println("Start daemon", cfg.Cmd)
+	debug.DebugLog.Println("Start daemon", cfg.Cmd)
 	dae.Lock()
 
 	command_parts := strings.Fields(cfg.Cmd)

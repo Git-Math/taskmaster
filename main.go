@@ -6,23 +6,37 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"taskmaster/debug"
 	"taskmaster/master"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
 	"taskmaster/term"
+	"time"
 )
 
 func usage() {
-	fmt.Println("usage:", os.Args[0], "[-h] yamlfile")
+	fmt.Println("usage:", os.Args[0], "[-h|-v] yamlfile")
 	fmt.Println()
 	fmt.Println("positional argument:")
 	fmt.Println("  yamlfile:                  yaml config for programs")
 	fmt.Println()
+	fmt.Println("  -v                         verbose in stdout")
 	fmt.Println("  -h, --help                 show this help message and exit")
 }
 
 func status(program_map parse_yaml.ProgramMap) {
-	fmt.Println("status:", program_map)
+	for name, daemons := range tasks.Daemons {
+		fmt.Println("Program name:", name)
+		fmt.Println("Cmd:         ", program_map[name].Cmd)
+		for i, daemon := range daemons {
+			fmt.Printf("    Process %d:\n", i)
+			fmt.Println("        No restart:   ", daemon.NoRestart)
+			fmt.Println("        Start time:   ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
+			fmt.Println("        Start retries:", daemon.StartRetries)
+			fmt.Println("        Running:      ", daemon.Running)
+			fmt.Println("        Exit code:    ", daemon.ExitCode)
+		}
+	}
 }
 
 func start(name string, cfg parse_yaml.Program) {
@@ -132,15 +146,29 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 }
 
 func main() {
-	if len(os.Args) != 2 {
+	var cfg_yaml string
+	if len(os.Args) == 3 {
+		if os.Args[1] == "-v" {
+			debug.DebugLog = log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+			cfg_yaml = os.Args[2]
+		} else {
+			usage()
+			os.Exit(1)
+		}
+	} else if len(os.Args) != 2 {
 		usage()
 		os.Exit(1)
 	} else if os.Args[1] == "-h" || os.Args[1] == "--help" {
 		usage()
 		os.Exit(0)
+	} else {
+		file, err := os.OpenFile("logs.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			log.Fatal(err)
+		}
+		debug.DebugLog = log.New(file, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile)
+		cfg_yaml = os.Args[1]
 	}
-
-	cfg_yaml := os.Args[1]
 
 	program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
