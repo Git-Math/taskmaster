@@ -12,6 +12,8 @@ import (
 	"taskmaster/tasks"
 	"taskmaster/term"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func usage() {
@@ -26,15 +28,25 @@ func usage() {
 
 func status(program_map parse_yaml.ProgramMap) {
 	for name, daemons := range tasks.Daemons {
+		cfg := program_map[name]
+
 		fmt.Println("Program name:", name)
-		fmt.Println("Cmd:         ", program_map[name].Cmd)
+		fmt.Println("Cmd:         ", cfg.Cmd)
 		for i, daemon := range daemons {
+			status := ""
+			if daemon.Uptime != 0 && daemon.Uptime < int64(cfg.Starttime) {
+				status = "Starting"
+			} else if daemon.Running {
+				status = "Running"
+			} else {
+				status = fmt.Sprintf("Exited (code=%d) %s", daemon.ExitCode, daemon.ErrMsg)
+			}
 			fmt.Printf("    Process %d:\n", i)
+			fmt.Println("        Status:       ", status)
 			fmt.Println("        No restart:   ", daemon.NoRestart)
 			fmt.Println("        Start time:   ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
-			fmt.Println("        Start retries:", daemon.StartRetries)
-			fmt.Println("        Running:      ", daemon.Running)
-			fmt.Println("        Exit code:    ", daemon.ExitCode)
+			fmt.Println("        Uptime:       ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
+			fmt.Println("        Start retries:", daemon.StartRetries, "/", cfg.Startretries)
 		}
 	}
 }
@@ -54,6 +66,7 @@ func restart(program_name string, cfg parse_yaml.Program) {
 
 func RemoveProgram(program_name string, cfg parse_yaml.Program) {
 	stop(program_name, cfg)
+	tasks.Remove(program_name)
 }
 
 func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
@@ -66,6 +79,21 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 	for key, cfg := range program_map {
 		if _, key_exist := new_program_map[key]; !key_exist {
 			RemoveProgram(key, cfg)
+		} else if !cmp.Equal(cfg, new_program_map[key]) {
+			RemoveProgram(key, cfg)
+			tasks.Add(key, new_program_map[key])
+			if new_program_map[key].Autostart {
+				tasks.StartProgram(key, new_program_map[key])
+			}
+		}
+	}
+
+	for key, cfg := range new_program_map {
+		if _, key_exist := program_map[key]; !key_exist {
+			tasks.Add(key, cfg)
+			if cfg.Autostart {
+				tasks.StartProgram(key, cfg)
+			}
 		}
 	}
 

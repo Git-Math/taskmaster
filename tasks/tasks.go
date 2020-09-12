@@ -44,10 +44,12 @@ type Daemon struct {
 	Command      *exec.Cmd  /* Cmd */
 	NoRestart    bool       /* Indicate that the daemon is dead */
 	StartTime    int64      /* Start Time of the program */
+	Uptime       int64      /* Uptime */
 	StartRetries int        /* Count of time the program was restarted because it stopped before Starttime */
 	Running      bool       /* Indicate that the program has been running long enough to say it's running */
 	ExitCode     int        /* Exit Code of the program or -1 */
 	Err          chan error /* Channel to the goroutine waiting for the program to return */
+	ErrMsg       string
 	mut          sync.Mutex
 }
 
@@ -76,6 +78,7 @@ func (dae *Daemon) Unlock() {
 
 func (dae *Daemon) reset() {
 	dae.StartTime = 0
+	dae.Uptime = 0
 	dae.Running = false
 	dae.ExitCode = -1
 	dae.Err = nil
@@ -177,6 +180,9 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 						return
 					}
 				}
+				dae.reset()
+				dae.ExitCode = 0
+				dae.ErrMsg = "Stopped by user"
 				dae.NoRestart = true
 				dae.Unlock()
 
@@ -195,4 +201,8 @@ func Add(name string, cfg parse_yaml.Program) {
 		dae.Name = name
 		Daemons[name] = append(Daemons[name], &dae)
 	}
+}
+
+func Remove(name string) {
+	delete(Daemons, name)
 }

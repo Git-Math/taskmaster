@@ -16,7 +16,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		return
 	}
 
-	uptime := (tasks.CurrentTimeMillisecond() - dae.StartTime) / 1000
+	dae.Uptime = (tasks.CurrentTimeMillisecond() - dae.StartTime) / 1000
 	exited := false
 	var err error = nil
 
@@ -25,7 +25,8 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		exited = true
 		dae.Running = false
 		if err != nil {
-			tasks.Register(dae, "Exited ("+err.Error()+")")
+			dae.ErrMsg = err.Error()
+			tasks.Register(dae, "Exited ("+dae.ErrMsg+")")
 		} else {
 			tasks.Register(dae, "Exited ("+"Success"+")")
 			dae.ExitCode = 0
@@ -33,9 +34,9 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	default:
 	}
 
-	log.Debug.Println(dae.Name, "uptime =", uptime, "start-time =", cfg.Starttime)
+	log.Debug.Println(dae.Name, "uptime =", dae.Uptime, "start-time =", cfg.Starttime)
 
-	if exited && uptime < int64(cfg.Starttime) {
+	if exited && dae.Uptime < int64(cfg.Starttime) {
 		/* dae exited before StartTime, check if it needs restarting */
 		log.Debug.Println(dae.Name, "exited=", exited, "startRetries=", dae.StartRetries, "max=", cfg.Startretries)
 
@@ -91,7 +92,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		return
 	}
 
-	if !dae.Running && uptime >= int64(cfg.Starttime) {
+	if !dae.Running && dae.Uptime >= int64(cfg.Starttime) {
 		/* dae just passed StartTime */
 
 		tasks.Register(dae, "Started")

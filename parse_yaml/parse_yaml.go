@@ -2,9 +2,10 @@ package parse_yaml
 
 import (
 	"errors"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"syscall"
+
+	"gopkg.in/yaml.v3"
 )
 
 var SignalMap = map[string]syscall.Signal{
