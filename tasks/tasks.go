@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"taskmaster/parse_yaml"
 	"time"
 )
@@ -72,11 +73,25 @@ func (dae *Daemon) Unlock() {
 	// fmt.Println("unlocked", dae.Name)
 }
 
+func (dae *Daemon) reset() {
+	dae.StartTime = 0
+	dae.Running = false
+	dae.ExitCode = -1
+	dae.Err = nil
+}
+
+func (dae *Daemon) Init() {
+	dae.Lock()
+	dae.reset()
+	dae.NoRestart = false
+	dae.StartTime = 0
+	dae.StartRetries = 0
+	dae.Unlock()
+}
+
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	// fmt.Println("Start daemon", cfg.Cmd)
 	dae.Lock()
-
-	dae.reset()
 
 	command_parts := strings.Fields(cfg.Cmd)
 	if len(command_parts) > 1 {
@@ -108,6 +123,10 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 		dae.Command.Stderr = nil
 	}
 
+	dae.Command.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: parse_yaml.SignalMap[cfg.Stopsignal],
+	}
+
 	dae.StartRetries++
 	dae.StartTime = CurrentTimeMillisecond()
 
@@ -121,17 +140,12 @@ func (dae *Daemon) stop() {
 	if !dae.Command.ProcessState.Exited() {
 		log.Fatal("dev: Called daemon.Stop before process `" + dae.Name + "' exited")
 	}
-	dae.reset()
 	dae.ExitCode = dae.Command.ProcessState.ExitCode()
-}
-
-func (dae *Daemon) reset() {
-	dae.Running = false
-	dae.ExitCode = -1
 }
 
 func StartProgram(name string, cfg parse_yaml.Program) {
 	for _, daemon := range Daemons[name] {
+		daemon.Init()
 		go daemon.Start(cfg)
 	}
 }
@@ -153,17 +167,19 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 				fmt.Println(dae.Name, "stopping ...")
 
 				dae.Lock()
-				dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
-				dae.Unlock()
-
-				time.Sleep(time.Duration(cfg.Stoptime) * time.Second)
-
-				dae.Lock()
-				if dae.Running {
-					dae.Command.Process.Kill()
+				err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
+				if err != nil {
+					fmt.Println(dae.Name, ": failed to stop program cleanly:", err)
+					if err = dae.Command.Process.Kill(); err != nil {
+						fmt.Println(dae.Name, ": failed to stop program:", err)
+						dae.Unlock()
+						return
+					}
 				}
-				dae.stop()
+				dae.NoRestart = true
 				dae.Unlock()
+
+				fmt.Println(dae.Name, "stopped")
 			}()
 		}
 	}

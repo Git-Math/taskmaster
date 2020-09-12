@@ -38,6 +38,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	if exited && uptime < int64(cfg.Starttime) {
 		/* dae exited before StartTime, check if it needs restarting */
 
+		fmt.Println("COUCOU: exited=", exited, "startRetries=", dae.StartRetries, "max=", cfg.Startretries)
 		if dae.StartRetries == cfg.Startretries {
 			msg := "Failed to start after " + strconv.Itoa(cfg.Startretries) + " times"
 			if err != nil {
