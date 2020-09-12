@@ -4,6 +4,7 @@ import (
 	"fmt"
 	l "log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"taskmaster/log"
@@ -27,7 +28,13 @@ func usage() {
 }
 
 func status(program_map parse_yaml.ProgramMap) {
-	for name, daemons := range tasks.Daemons {
+	names := make([]string, 0)
+	for name, _ := range tasks.Daemons {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		daemons := tasks.Daemons[name]
 		cfg := program_map[name]
 
 		fmt.Println("Program name:", name)
@@ -35,18 +42,17 @@ func status(program_map parse_yaml.ProgramMap) {
 		for i, daemon := range daemons {
 			status := ""
 			if daemon.Uptime != 0 && daemon.Uptime < int64(cfg.Starttime) {
-				status = "Starting"
+				status = fmt.Sprintf("Starting %d/%d", daemon.Uptime, cfg.Starttime)
 			} else if daemon.Running {
 				status = "Running"
 			} else {
 				status = fmt.Sprintf("Exited (code=%d) %s", daemon.ExitCode, daemon.ErrMsg)
 			}
 			fmt.Printf("    Process %d:\n", i)
-			fmt.Println("        Status:       ", status)
-			fmt.Println("        No restart:   ", daemon.NoRestart)
-			fmt.Println("        Start time:   ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
-			fmt.Println("        Uptime:       ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
-			fmt.Println("        Start retries:", daemon.StartRetries, "/", cfg.Startretries)
+			fmt.Println("        Status:          ", status)
+			fmt.Println("        Start time:      ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
+			fmt.Println("        Uptime (seconds):", daemon.Uptime)
+			fmt.Println("        Start retries:   ", daemon.StartRetries, "/", cfg.Startretries)
 		}
 	}
 }
