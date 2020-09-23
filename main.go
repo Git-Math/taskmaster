@@ -78,7 +78,8 @@ func RemoveProgram(program_name string, cfg parse_yaml.Program) {
 func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
 	new_program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println("Invalid config file: "+cfg_yaml+":", err)
+		fmt.Println("reload_config failed, no config changes")
 		return program_map
 	}
 
@@ -206,7 +207,7 @@ func main() {
 
 	program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
-		l.Fatal(err)
+		l.Fatalln(err)
 	}
 
 	for name, program := range program_map {
