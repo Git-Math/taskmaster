@@ -2,10 +2,10 @@ package parse_yaml
 
 import (
 	"errors"
-	"io/ioutil"
-	"syscall"
-
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
+	"strconv"
+	"syscall"
 )
 
 var SignalMap = map[string]syscall.Signal{
@@ -55,12 +55,29 @@ type ProgramsStruct struct {
 
 func CheckYaml(program_map ProgramMap) error {
 	for key, program := range program_map {
-		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
-			return errors.New("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]\n")
+		if program.Cmd == "" {
+			return errors.New("Program " + key + ": invalid cmd value: can't be empty")
 		}
-
+		if program.Numprocs < 1 {
+			return errors.New("Program " + key + ": invalid numprocs value: [" + strconv.Itoa(program.Numprocs) + "], should be greater than 0")
+		}
+		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
+			return errors.New("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]")
+		}
+		if len(program.Exitcodes) == 0 {
+			return errors.New("Program " + key + ": invalid exitcodes value: can't be empty")
+		}
+		if program.Startretries < 0 {
+			return errors.New("Program " + key + ": invalid startretries value: [" + strconv.Itoa(program.Startretries) + "], should be greater than or equal to 0")
+		}
+		if program.Starttime < 0 {
+			return errors.New("Program " + key + ": invalid starttime value: [" + strconv.Itoa(program.Starttime) + "], should be greater than or equal to 0")
+		}
+		if program.Stoptime < 1 {
+			return errors.New("Program " + key + ": invalid stoptime value: [" + strconv.Itoa(program.Stoptime) + "], should be greater than 0")
+		}
 		if _, key_exist := SignalMap[program.Stopsignal]; !key_exist {
-			return errors.New("Program " + key + ": invalid stopsignal value: [" + program.Stopsignal + "]\n")
+			return errors.New("Program " + key + ": invalid stopsignal value: [" + program.Stopsignal + "]")
 		}
 	}
 	return nil
