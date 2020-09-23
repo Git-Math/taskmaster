@@ -164,25 +164,47 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 		dae.Unlock()
 		log.Debug.Println("Stopping", program_name, "running=", running)
 		if running {
+
+			log.Debug.Println(dae.Name, "stopping ...")
+			dae.Lock()
+			err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
+			dae.Unlock()
+			if err != nil {
+				log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
+			}
+
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 
-				log.Debug.Println(dae.Name, "stopping ...")
+				exited := false
+				for i := 0; i < cfg.Stoptime; i++ {
+					time.Sleep(1 * time.Second)
+					dae.Lock()
+					errmsg := dae.Command.ProcessState.String()
+					dae.Unlock()
+					if errmsg != "<nil>" {
+						exited = true
+						dae.ErrMsg = errmsg
+						break
+					}
+				}
 
-				dae.Lock()
-				err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
-				if err != nil {
-					log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
-					if err = dae.Command.Process.Kill(); err != nil {
+				if !exited {
+					log.Debug.Println(dae.Name, ": failed to stop program cleanly, now forcing ..")
+					dae.Lock()
+					err = dae.Command.Process.Kill()
+					dae.Unlock()
+					if err != nil {
 						log.Debug.Println(dae.Name, ": failed to stop program:", err)
-						dae.Unlock()
 						return
 					}
 				}
+
+				dae.Lock()
 				dae.reset()
 				dae.ExitCode = 0
-				dae.ErrMsg = "Stopped by user"
+				dae.ErrMsg = dae.Command.ProcessState.String()
 				dae.NoRestart = true
 				dae.Unlock()
 
@@ -190,6 +212,7 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 			}()
 		}
 	}
+
 	wg.Wait()
 }
 
