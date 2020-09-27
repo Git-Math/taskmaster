@@ -86,6 +86,9 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		dae.Unlock()
 
 		if restart {
+			dae.Lock()
+			dae.StartRetries = 0
+			dae.Unlock()
 			go dae.Start(cfg)
 		}
 
