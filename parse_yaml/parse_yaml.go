@@ -53,6 +53,15 @@ type ProgramsStruct struct {
 	Programs ProgramMap `yaml:"programs"`
 }
 
+func CheckUmask(umask string) bool {
+	for i := 0; i < len(umask); i++ {
+		if umask[i] < '0' || umask[i] > '7' {
+			return false
+		}
+	}
+	return true
+}
+
 func CheckYaml(program_map ProgramMap) error {
 	for key, program := range program_map {
 		if program.Cmd == "" {
@@ -60,6 +69,12 @@ func CheckYaml(program_map ProgramMap) error {
 		}
 		if program.Numprocs < 1 {
 			return errors.New("Program " + key + ": invalid numprocs value: [" + strconv.Itoa(program.Numprocs) + "], should be greater than 0")
+		}
+		if len(program.Umask) != 3 {
+			return errors.New("Program " + key + ": invalid umask size: [" + strconv.Itoa(len(program.Umask)) + "], should be 3")
+		}
+		if !CheckUmask(program.Umask) {
+			return errors.New("Program " + key + ": invalid umask value: [" + program.Umask + "], must contain only digits between 0 and 7")
 		}
 		if program.Autorestart != "always" && program.Autorestart != "never" && program.Autorestart != "unexpected" {
 			return errors.New("Program " + key + ": invalid autorestart value: [" + program.Autorestart + "], should be [always], [never] or [unexpected]")
