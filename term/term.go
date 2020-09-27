@@ -102,10 +102,13 @@ var keyMap = map[uint32]interface{}{
 	458965760:  arrow_right,
 }
 
+var prompt string = "\033[32mtask\033[m \033[33mmaster\033[m \033[31m$>\033[m "
+
 func ReadLine() string {
 	cmd := Cmd{}
 	run := true
 
+	fmt.Printf("%s", prompt)
 	for run {
 		key := make([]byte, 4)
 
@@ -129,7 +132,7 @@ func ReadLine() string {
 			run = k != 167772160
 		}
 
-		output := "\r\033[2K"
+		output := "\r\033[2K" + prompt
 		output += string(cmd.text)
 		for i := cmd.index; i < len(cmd.text); i++ {
 			output += "\b"
