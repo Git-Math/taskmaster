@@ -12,6 +12,22 @@ programs:
         starttime: 1
         stopsignal: INT
         stoptime: 1
-        stdout: ./tmp/loop-write-file.stdout
-        stderr: ./tmp/loop-write-file.stderr
+        stdout: ./tmp/write-022.stdout
+        stderr: ./tmp/write-022.stderr
         env: ["WHERE=here.txt"]
+    write-066:
+        cmd: "/home/arthour/go/src/taskmaster/programs/loop-write-file"
+        numprocs: 1
+        umask: 066
+        workingdir: ./tmp/write/
+        autostart: true
+        autorestart: unexpected
+        exitcodes:
+            - 0
+        startretries: 1
+        starttime: 1
+        stopsignal: INT
+        stoptime: 1
+        stdout: ./tmp/066.stdout
+        stderr: ./tmp/066.stderr
+        env: ["WHERE=coucou.txt"]

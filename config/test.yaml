@@ -37,7 +37,23 @@ programs:
         umask: 077
         workingdir: ./tmp
         autostart: true
-        autorestart: unexpected
+        autorestart: always
+        exitcodes:
+            - 0
+        startretries: 2
+        starttime: 5
+        stopsignal: TERM
+        stoptime: 1
+        stdout: ./tmp/wait-5sec-and-exit-success.stdout
+        stderr: ./tmp/wait-5sec-and-exit-success.stderr
+        env:
+    wait-5sec-and-exit-success-nostart:
+        cmd: "/home/arthour/go/src/taskmaster/programs/wait-5sec-and-exit-success"
+        numprocs: 1
+        umask: 077
+        workingdir: ./tmp
+        autostart: false
+        autorestart: always
         exitcodes:
             - 0
         startretries: 2
@@ -53,7 +69,7 @@ programs:
         umask: 077
         workingdir: ./tmp
         autostart: true
-        autorestart: unexpected
+        autorestart: never
         exitcodes:
             - 0
         startretries: 2
