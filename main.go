@@ -132,10 +132,10 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 
 	cmd := text_list[0]
 	args := text_list[1:]
-	switch cmd {
-	case "status":
+	switch {
+	case strings.HasPrefix("status", cmd):
 		status(program_map)
-	case "start":
+	case strings.HasPrefix("start", cmd):
 		if len(args) == 0 {
 			fmt.Println("start command needs at least one program name as argument")
 			return
@@ -147,7 +147,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 				start(arg, program_map[arg])
 			}
 		}
-	case "stop":
+	case strings.HasPrefix("stop", cmd):
 		if len(args) == 0 {
 			fmt.Println("stop command needs at least one program name as argument")
 			return
@@ -159,7 +159,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 				stop(arg, program_map[arg])
 			}
 		}
-	case "restart":
+	case strings.HasPrefix("restart", cmd):
 		if len(args) == 0 {
 			fmt.Println("restart command needs at least one program name as argument")
 			return
@@ -171,9 +171,9 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 				restart(arg, program_map[arg])
 			}
 		}
-	case "reload_config":
+	case strings.HasPrefix("reload_config", cmd):
 		program_map = reload_config(program_map, cfg_yaml)
-	case "exit":
+	case strings.HasPrefix("exit", cmd):
 		exit(program_map)
 	default:
 		fmt.Println("command not found:", cmd)
