@@ -6,6 +6,7 @@ import (
 	l "log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -137,7 +138,19 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	dae.Unlock()
 
 	dae.Err = make(chan error)
-	dae.Err <- dae.Command.Run()
+	if err := dae.Command.Start(); err != nil {
+		dae.Err <- fmt.Errorf("failed to execute command `%s`: %v", cfg.Cmd, err)
+		return
+	}
+
+	umask, err := strconv.ParseUint(cfg.Umask, 8, 0)
+	if err != nil {
+		dae.Err <- fmt.Errorf("invalid Umask `%s`: %v", cfg.Umask, err)
+		return
+	}
+	_ = syscall.Umask(int(umask))
+
+	dae.Err <- dae.Command.Wait()
 }
 
 func (dae *Daemon) stop() {
