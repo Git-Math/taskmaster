@@ -30,3 +30,4 @@ programs:
          startretries: 3
          starttime: 5
          stopsignal: USR1
+         stoptime: 1
