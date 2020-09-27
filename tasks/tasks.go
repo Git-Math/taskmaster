@@ -135,21 +135,24 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	dae.StartRetries++
 	dae.StartTime = CurrentTimeMillisecond()
 
-	dae.Unlock()
-
-	dae.Err = make(chan error)
 	if err := dae.Command.Start(); err != nil {
-		dae.Err <- fmt.Errorf("failed to execute command `%s`: %v", cfg.Cmd, err)
+		log.Debug.Printf("%s: failed to execute command `%s`: %v\n", dae.Name, cfg.Cmd, err)
+		dae.reset()
+		dae.ExitCode = -1
+		dae.ErrMsg = fmt.Sprintf("failed to execute command `%s`: %v\n", cfg.Cmd, err)
+		dae.NoRestart = true
+		dae.Unlock()
 		return
 	}
 
 	umask, err := strconv.ParseUint(cfg.Umask, 8, 0)
 	if err != nil {
-		dae.Err <- fmt.Errorf("invalid Umask `%s`: %v", cfg.Umask, err)
-		return
+		log.Debug.Printf("%s: invalid umask `%s`: %v. umask ignored\n", dae.Name, cfg.Umask, err)
 	}
 	_ = syscall.Umask(int(umask))
 
+	dae.Err = make(chan error)
+	dae.Unlock()
 	dae.Err <- dae.Command.Wait()
 }
 
