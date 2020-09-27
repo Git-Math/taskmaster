@@ -11,7 +11,7 @@ import (
 func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	dae.Lock()
 
-	if dae.NoRestart {
+	if dae.NoRestart || dae.StartTime == 0 {
 		dae.Unlock()
 		return
 	}
