@@ -135,6 +135,12 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	dae.StartRetries++
 	dae.StartTime = CurrentTimeMillisecond()
 
+	umask, err := strconv.ParseUint(cfg.Umask, 8, 0)
+	if err != nil {
+		log.Debug.Printf("%s: invalid umask `%s`: %v. umask ignored\n", dae.Name, cfg.Umask, err)
+	}
+	old_mask := syscall.Umask(int(umask))
+
 	if err := dae.Command.Start(); err != nil {
 		log.Debug.Printf("%s: failed to execute command `%s`: %v\n", dae.Name, cfg.Cmd, err)
 		dae.reset()
@@ -145,11 +151,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 		return
 	}
 
-	umask, err := strconv.ParseUint(cfg.Umask, 8, 0)
-	if err != nil {
-		log.Debug.Printf("%s: invalid umask `%s`: %v. umask ignored\n", dae.Name, cfg.Umask, err)
-	}
-	_ = syscall.Umask(int(umask))
+	_ = syscall.Umask(old_mask)
 
 	dae.Err = make(chan error)
 	dae.Unlock()
