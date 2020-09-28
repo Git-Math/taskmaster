@@ -113,6 +113,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stdout != "" {
 		outfile, err := os.Create(cfg.Stdout)
 		if err != nil {
+			startMut.Unlock()
 			l.Fatal(err)
 		}
 		dae.Command.Stdout = outfile
@@ -123,7 +124,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stderr != "" {
 		errfile, err := os.Create(cfg.Stderr)
 		if err != nil {
-			startMut.Lock()
+			startMut.Unlock()
 			l.Fatal(err)
 		}
 		dae.Command.Stderr = errfile
@@ -141,6 +142,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	umask, err := strconv.ParseUint(cfg.Umask, 8, 0)
 	if err != nil {
 		log.Debug.Printf("%s: invalid umask `%s`: %v. umask ignored\n", dae.Name, cfg.Umask, err)
+		umask = 2
 	}
 	old_mask := syscall.Umask(int(umask))
 
@@ -150,6 +152,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 		dae.ExitCode = -1
 		dae.ErrMsg = fmt.Sprintf("failed to execute command `%s`: %v\n", cfg.Cmd, err)
 		dae.NoRestart = true
+		_ = syscall.Umask(old_mask)
 		startMut.Unlock()
 		return
 	}
