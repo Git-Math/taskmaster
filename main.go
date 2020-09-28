@@ -68,6 +68,7 @@ func stop(name string, cfg parse_yaml.Program) {
 }
 
 func restart(program_name string, cfg parse_yaml.Program) {
+	log.Debug.Println("Restarting", program_name)
 	stop(program_name, cfg)
 	start(program_name, cfg)
 }
@@ -78,10 +79,13 @@ func RemoveProgram(program_name string, cfg parse_yaml.Program) {
 }
 
 func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
+	log.Debug.Println("Reload config", cfg_yaml)
 	new_program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
 		fmt.Println("Invalid config file: "+cfg_yaml+":", err)
 		fmt.Println("reload_config failed, no config changes")
+		log.Debug.Println("Invalid config file: "+cfg_yaml+":", err)
+		log.Debug.Println("reload_config failed, no config changes")
 		return program_map
 	}
 
@@ -224,7 +228,7 @@ func main() {
 	go func() {
 		for {
 			// Block until a signal is received.
-			s := <-c
+			_ = <-c
 			tasks.StartMut.Lock()
 			program_map = reload_config(program_map, cfg_yaml)
 			tasks.StartMut.Unlock()
