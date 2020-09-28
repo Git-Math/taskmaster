@@ -68,7 +68,7 @@ func stop(name string, cfg parse_yaml.Program) {
 }
 
 func restart(program_name string, cfg parse_yaml.Program) {
-	log.Debug.Println("Restarting", program_name)
+	tasks.RegisterS("Restarting " + program_name)
 	stop(program_name, cfg)
 	start(program_name, cfg)
 }
@@ -79,7 +79,7 @@ func RemoveProgram(program_name string, cfg parse_yaml.Program) {
 }
 
 func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
-	log.Debug.Println("Reload config", cfg_yaml)
+	tasks.RegisterS("Reload config " + cfg_yaml)
 	new_program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
 		fmt.Println("Invalid config file: "+cfg_yaml+":", err)

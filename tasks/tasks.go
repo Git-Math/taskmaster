@@ -38,6 +38,19 @@ func Register(daemon *Daemon, msg string) {
 	log.Debug.Println(CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
 }
 
+func RegisterS(msg string) {
+	if registerFile == nil {
+		var err error
+
+		registerFile, err = os.Create("register.log")
+		if err != nil {
+			l.Fatal(err)
+		}
+	}
+	fmt.Fprintln(registerFile, CurrentTimeMillisecond(), msg)
+	log.Debug.Println(CurrentTimeMillisecond(), msg)
+}
+
 /* }}} */
 
 type Daemon struct {
