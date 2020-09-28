@@ -202,6 +202,8 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 			go func() {
 				defer wg.Done()
 
+				msg := ""
+
 				exited := false
 				for i := 0; i < cfg.Stoptime; i++ {
 					time.Sleep(1 * time.Second)
@@ -210,7 +212,7 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 					dae.Unlock()
 					if errmsg != "<nil>" {
 						exited = true
-						dae.ErrMsg = errmsg
+						msg = errmsg
 						break
 					}
 				}
@@ -221,19 +223,23 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 					err = dae.Command.Process.Kill()
 					dae.Unlock()
 					if err != nil {
+						Register(dae, "failed to stop: "+err.Error())
 						log.Debug.Println(dae.Name, ": failed to stop program:", err)
 						return
 					}
+					msg = "forced stop"
 				}
 
 				dae.Lock()
 				dae.reset()
 				dae.ExitCode = 0
-				dae.ErrMsg = dae.Command.ProcessState.String()
+				dae.ErrMsg = msg
 				dae.NoRestart = true
 				dae.Unlock()
 
-				log.Debug.Println(dae.Name, "stopped")
+				Register(dae, "stopped: "+dae.ErrMsg)
+
+				log.Debug.Println(dae.Name, "stopped:", dae.ErrMsg)
 			}()
 		}
 	}
