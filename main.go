@@ -4,9 +4,11 @@ import (
 	"fmt"
 	l "log"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"taskmaster/log"
 	"taskmaster/master"
 	"taskmaster/parse_yaml"
@@ -216,6 +218,18 @@ func main() {
 			tasks.StartProgram(name, program)
 		}
 	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP)
+	go func() {
+		for {
+			// Block until a signal is received.
+			s := <-c
+			tasks.StartMut.Lock()
+			program_map = reload_config(program_map, cfg_yaml)
+			tasks.StartMut.Unlock()
+		}
+	}()
 
 	go master.Watch(program_map)
 

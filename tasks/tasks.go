@@ -94,11 +94,11 @@ func (dae *Daemon) Init() {
 	dae.Unlock()
 }
 
-var startMut sync.Mutex
+var StartMut sync.Mutex
 
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	log.Debug.Println("Start daemon", cfg.Cmd)
-	startMut.Lock()
+	StartMut.Lock()
 
 	command_parts := strings.Fields(cfg.Cmd)
 	if len(command_parts) > 1 {
@@ -113,7 +113,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stdout != "" {
 		outfile, err := os.Create(cfg.Stdout)
 		if err != nil {
-			startMut.Unlock()
+			StartMut.Unlock()
 			l.Fatal(err)
 		}
 		dae.Command.Stdout = outfile
@@ -124,7 +124,7 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	if cfg.Stderr != "" {
 		errfile, err := os.Create(cfg.Stderr)
 		if err != nil {
-			startMut.Unlock()
+			StartMut.Unlock()
 			l.Fatal(err)
 		}
 		dae.Command.Stderr = errfile
@@ -153,13 +153,13 @@ func (dae *Daemon) Start(cfg parse_yaml.Program) {
 		dae.ErrMsg = fmt.Sprintf("failed to execute command `%s`: %v\n", cfg.Cmd, err)
 		dae.NoRestart = true
 		_ = syscall.Umask(old_mask)
-		startMut.Unlock()
+		StartMut.Unlock()
 		return
 	}
 
 	_ = syscall.Umask(old_mask)
 
-	startMut.Unlock()
+	StartMut.Unlock()
 
 	dae.Err = make(chan error)
 	dae.Err <- dae.Command.Wait()
