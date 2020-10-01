@@ -72,7 +72,7 @@ func stop(name string, cfg parse_yaml.Program) {
 }
 
 func restart(program_name string, cfg parse_yaml.Program) {
-	tasks.RegisterS("Restarting " + program_name)
+	tasks.RegisterS("[ " + program_name + " ] restart")
 	stop(program_name, cfg)
 	start(program_name, cfg)
 }
