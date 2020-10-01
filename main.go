@@ -43,7 +43,7 @@ func status(program_map parse_yaml.ProgramMap) {
 		fmt.Println("Cmd:         ", cfg.Cmd)
 		for i, daemon := range daemons {
 			status := ""
-			if daemon.Uptime != 0 && daemon.Uptime < int64(cfg.Starttime) {
+			if !daemon.NoRestart && daemon.Uptime < int64(cfg.Starttime) {
 				status = fmt.Sprintf("Starting %d/%d", daemon.Uptime, cfg.Starttime)
 			} else if daemon.Running {
 				status = "Running"
