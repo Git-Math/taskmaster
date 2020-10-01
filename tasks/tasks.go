@@ -53,17 +53,19 @@ func RegisterS(msg string) {
 /* }}} */
 
 type Daemon struct {
-	Name         string     /* name of the program from the yaml */
-	Command      *exec.Cmd  /* Cmd */
-	NoRestart    bool       /* Indicate that the daemon is dead */
-	StartTime    int64      /* Start Time of the program */
-	Uptime       int64      /* Uptime */
-	StartRetries int        /* Count of time the program was restarted because it stopped before Starttime */
-	Running      bool       /* Indicate that the program has been running long enough to say it's running */
-	ExitCode     int        /* Exit Code of the program or -1 */
-	Err          chan error /* Channel to the goroutine waiting for the program to return */
-	ErrMsg       string
-	mut          sync.Mutex
+	Name            string     /* name of the program from the yaml */
+	Command         *exec.Cmd  /* Cmd */
+	NoRestart       bool       /* Indicate that the daemon is dead */
+	StartTime       int64      /* Start Time of the program */
+	Uptime          int64      /* Uptime */
+	StartRetries    int        /* Count of time the program was restarted because it stopped before Starttime */
+	Running         bool       /* Indicate that the program has been running long enough to say it's running */
+	Stopping        bool       /* program is stopping */
+	StoptimeCounter int        /* count before stoptime */
+	ExitCode        int        /* Exit Code of the program or -1 */
+	Err             chan error /* Channel to the goroutine waiting for the program to return */
+	ErrMsg          string
+	mut             sync.Mutex
 }
 
 var Daemons = make(map[string]([]*Daemon))
@@ -199,67 +201,23 @@ func StartProgram(name string, cfg parse_yaml.Program) {
 }
 
 func StopProgram(program_name string, cfg parse_yaml.Program) {
-	var wg sync.WaitGroup
-
 	daemons := DaemonRetrieve(program_name)
 	for _, dae := range daemons {
 		dae.Lock()
-		running := dae.Running || dae.StartTime > 0
+		running := !dae.Stopping && (dae.Running || dae.StartTime > 0)
 		dae.Unlock()
 		log.Debug.Println("Stopping", program_name, "running=", running)
 		if running {
 			log.Debug.Println(dae.Name, "stopping ...")
 			dae.Lock()
+			dae.Stopping = true
+			dae.StoptimeCounter = 0
 			err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
-			dae.Unlock()
 			if err != nil {
 				log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
 			}
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				msg := ""
-
-				exited := false
-				for i := 0; i < cfg.Stoptime; i++ {
-					time.Sleep(1 * time.Second)
-					dae.Lock()
-					errmsg := dae.Command.ProcessState.String()
-					dae.Unlock()
-					if errmsg != "<nil>" {
-						exited = true
-						msg = errmsg
-						break
-					}
-				}
-
-				dae.Lock()
-				if !exited {
-					log.Debug.Println(dae.Name, ": failed to stop program cleanly, now forcing ..")
-					err = dae.Command.Process.Kill()
-					if err != nil {
-						Register(dae, "failed to stop: "+err.Error())
-						log.Debug.Println(dae.Name, ": failed to stop program:", err)
-						dae.Unlock()
-						return
-					}
-					msg = "forced stop"
-				}
-
-				dae.reset()
-				dae.ExitCode = 0
-				dae.ErrMsg = msg
-				dae.NoRestart = true
-				dae.Unlock()
-
-				log.Debug.Println(dae.Name, "stopped:", dae.ErrMsg)
-			}()
 		}
 	}
-
-	wg.Wait()
 }
 
 func Add(name string, cfg parse_yaml.Program) {

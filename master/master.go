@@ -28,9 +28,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		dae.Running = false
 		if err != nil {
 			dae.ErrMsg = err.Error()
-			tasks.Register(dae, "Exited ("+dae.ErrMsg+")")
 		} else {
-			tasks.Register(dae, "Exited ("+"Success"+")")
 			dae.ExitCode = 0
 		}
 	default:
@@ -38,7 +36,32 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 
 	log.Debug.Println(dae.Name, "uptime =", dae.Uptime, "start-time =", cfg.Starttime)
 
-	if exited && dae.Uptime < int64(cfg.Starttime) {
+	if !exited && dae.Stopping {
+		errmsg := dae.Command.ProcessState.String()
+		if errmsg != "<nil>" {
+			exited = true
+			dae.Running = false
+			dae.ErrMsg = errmsg
+		} else {
+			dae.StoptimeCounter++
+			if dae.StoptimeCounter == cfg.Stoptime {
+				err = dae.Command.Process.Kill()
+				if err != nil {
+					tasks.Register(dae, "failed to stop: "+err.Error())
+					log.Debug.Println(dae.Name, ": failed to stop program:", err)
+					dae.StoptimeCounter = 0
+					dae.Stopping = false
+					dae.Unlock()
+					return
+				}
+				exited = true
+				dae.Running = false
+				dae.ErrMsg = "forced stop"
+			}
+		}
+	}
+
+	if !dae.Stopping && exited && dae.Uptime < int64(cfg.Starttime) {
 		/* dae exited before StartTime, check if it needs restarting */
 		log.Debug.Println(dae.Name, "exited=", exited, "startRetries=", dae.StartRetries, "max=", cfg.Startretries)
 
@@ -62,6 +85,12 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	}
 
 	if exited {
+		if dae.ErrMsg != "" {
+			tasks.Register(dae, "Exited ("+dae.ErrMsg+")")
+		} else {
+			tasks.Register(dae, "Exited ("+"Success"+")")
+		}
+
 		restart := false
 		switch cfg.Autorestart {
 		case "unexpected":
@@ -85,16 +114,19 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		}
 
 		// unlock before calling Start
+		dae.StoptimeCounter = 0
+		dae.Stopping = false
 		dae.StartTime = 0
-		dae.Unlock()
 
-		if restart {
-			dae.Lock()
+		if !dae.Stopping && restart {
 			dae.StartRetries = 0
-			dae.Unlock()
 			tasks.Register(dae, "restarting ..")
+			dae.Unlock()
 			go dae.Start(cfg)
+			return
 		}
+
+		dae.Unlock()
 
 		return
 	}
