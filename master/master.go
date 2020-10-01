@@ -1,6 +1,7 @@
 package master
 
 import (
+	"os"
 	"strconv"
 	"taskmaster/log"
 	"taskmaster/parse_yaml"
@@ -10,12 +11,12 @@ import (
 
 var Stopping bool = false
 
-func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
+func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 	dae.Lock()
 
 	if dae.NoRestart || dae.StartTime == 0 {
 		dae.Unlock()
-		return
+		return false
 	}
 
 	dae.Uptime = (tasks.CurrentTimeMillisecond() - dae.StartTime) / 1000
@@ -52,7 +53,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 					dae.StoptimeCounter = 0
 					dae.Stopping = false
 					dae.Unlock()
-					return
+					return true
 				}
 				exited = true
 				dae.Running = false
@@ -77,11 +78,11 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		// unlock before calling Start
 		dae.Unlock()
 
-		if dae.StartRetries < cfg.Startretries {
+		if dae.StartRetries < cfg.Startretries && !tasks.Stopping {
 			go dae.Start(cfg)
 		}
 
-		return
+		return false
 	}
 
 	if exited {
@@ -118,17 +119,17 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		dae.Stopping = false
 		dae.StartTime = 0
 
-		if !dae.Stopping && restart {
+		if !tasks.Stopping && !dae.Stopping && restart {
 			dae.StartRetries = 0
-			tasks.Register(dae, "restarting ..")
 			dae.Unlock()
+			tasks.Register(dae, "restarting ..")
 			go dae.Start(cfg)
-			return
+			return false
 		}
 
 		dae.Unlock()
 
-		return
+		return false
 	}
 
 	if !dae.Running && dae.Uptime >= int64(cfg.Starttime) {
@@ -139,6 +140,8 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	}
 
 	dae.Unlock()
+
+	return true
 }
 
 func Watch(programs_cfg parse_yaml.ProgramMap) {
@@ -146,16 +149,23 @@ func Watch(programs_cfg parse_yaml.ProgramMap) {
 		if Stopping {
 			break
 		}
+		exit := true
 		for _, daemons := range tasks.Daemons {
 			for _, daemon := range daemons {
 				cfg := programs_cfg[daemon.Name]
 
 				if !daemon.NoRestart {
 					log.Debug.Println("Watching for daemon", daemon.Name)
-					watchDaemon(daemon, cfg)
+					running := watchDaemon(daemon, cfg)
+					if running {
+						exit = false
+					}
 					log.Debug.Println("Watching for daemon", daemon.Name, "returned")
 				}
 			}
+		}
+		if tasks.Stopping && exit {
+			os.Exit(0)
 		}
 	}
 }

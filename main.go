@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"taskmaster/log"
 	"taskmaster/master"
@@ -118,21 +117,10 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 }
 
 func exit(program_map parse_yaml.ProgramMap) {
-	var wg sync.WaitGroup
-
-	wg.Add(len(program_map))
-
-	master.Stopping = true
-
+	tasks.Stopping = true
 	for key, cfg := range program_map {
-		go func() {
-			defer wg.Done()
-			stop(key, cfg)
-		}()
+		stop(key, cfg)
 	}
-
-	wg.Wait()
-	os.Exit(0)
 }
 
 func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) {

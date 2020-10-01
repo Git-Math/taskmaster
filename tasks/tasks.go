@@ -109,6 +109,7 @@ func (dae *Daemon) Init() {
 }
 
 var StartMut sync.Mutex
+var Stopping bool = false
 
 func (dae *Daemon) Start(cfg parse_yaml.Program) {
 	log.Debug.Println("Start daemon", cfg.Cmd)
@@ -191,7 +192,7 @@ func StartProgram(name string, cfg parse_yaml.Program) {
 		daemon.Lock()
 		running := daemon.StartTime != 0
 		daemon.Unlock()
-		if running {
+		if running || Stopping {
 			continue
 		}
 
@@ -205,11 +206,9 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 	for _, dae := range daemons {
 		dae.Lock()
 		running := !dae.Stopping && (dae.Running || dae.StartTime > 0)
-		dae.Unlock()
 		log.Debug.Println("Stopping", program_name, "running=", running)
 		if running {
 			log.Debug.Println(dae.Name, "stopping ...")
-			dae.Lock()
 			dae.Stopping = true
 			dae.StoptimeCounter = 0
 			err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
@@ -217,6 +216,7 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 				log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
 			}
 		}
+		dae.Unlock()
 	}
 }
 
