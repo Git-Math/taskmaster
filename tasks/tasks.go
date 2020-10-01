@@ -235,27 +235,24 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 					}
 				}
 
+				dae.Lock()
 				if !exited {
 					log.Debug.Println(dae.Name, ": failed to stop program cleanly, now forcing ..")
-					dae.Lock()
 					err = dae.Command.Process.Kill()
-					dae.Unlock()
 					if err != nil {
 						Register(dae, "failed to stop: "+err.Error())
 						log.Debug.Println(dae.Name, ": failed to stop program:", err)
+						dae.Unlock()
 						return
 					}
 					msg = "forced stop"
 				}
 
-				dae.Lock()
 				dae.reset()
 				dae.ExitCode = 0
 				dae.ErrMsg = msg
 				dae.NoRestart = true
 				dae.Unlock()
-
-				Register(dae, "stopped: "+dae.ErrMsg)
 
 				log.Debug.Println(dae.Name, "stopped:", dae.ErrMsg)
 			}()
