@@ -118,6 +118,8 @@ func exit(program_map parse_yaml.ProgramMap) {
 
 	wg.Add(len(program_map))
 
+	master.Stopping = true
+
 	for key, cfg := range program_map {
 		go func() {
 			defer wg.Done()

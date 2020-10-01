@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+var Stopping bool = false
+
 func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 	dae.Lock()
 
@@ -83,6 +85,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 		}
 
 		// unlock before calling Start
+		dae.StartTime = 0
 		dae.Unlock()
 
 		if restart {
@@ -108,6 +111,9 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) {
 
 func Watch(programs_cfg parse_yaml.ProgramMap) {
 	for range time.Tick(1000 * time.Millisecond) {
+		if Stopping {
+			break
+		}
 		for _, daemons := range tasks.Daemons {
 			for _, daemon := range daemons {
 				cfg := programs_cfg[daemon.Name]

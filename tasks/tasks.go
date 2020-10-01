@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"fmt"
-	"io"
 	l "log"
 	"os"
 	"os/exec"
@@ -23,7 +22,7 @@ func CurrentTimeMillisecond() int64 {
 
 /* {{{ Register */
 
-var registerFile io.Writer = nil
+var registerFile *os.File = nil
 
 func Register(daemon *Daemon, msg string) {
 	if registerFile == nil {
@@ -187,6 +186,13 @@ func (dae *Daemon) stop() {
 
 func StartProgram(name string, cfg parse_yaml.Program) {
 	for _, daemon := range Daemons[name] {
+		daemon.Lock()
+		running := daemon.StartTime != 0
+		daemon.Unlock()
+		if running {
+			continue
+		}
+
 		daemon.Init()
 		go daemon.Start(cfg)
 	}
@@ -198,11 +204,10 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 	daemons := DaemonRetrieve(program_name)
 	for _, dae := range daemons {
 		dae.Lock()
-		running := dae.Running
+		running := dae.Running || dae.StartTime > 0
 		dae.Unlock()
 		log.Debug.Println("Stopping", program_name, "running=", running)
 		if running {
-
 			log.Debug.Println(dae.Name, "stopping ...")
 			dae.Lock()
 			err := dae.Command.Process.Signal(parse_yaml.SignalMap[cfg.Stopsignal])
