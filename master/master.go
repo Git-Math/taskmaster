@@ -1,17 +1,16 @@
 package master
 
 import (
-	"os"
 	"strconv"
 	"syscall"
 	"taskmaster/log"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
-	"time"
 )
 
 var Stopping bool = false
 
+// return true if the daemon is running, false otherwise
 func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 	dae.Lock()
 
@@ -19,6 +18,8 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 		dae.Unlock()
 		return false
 	}
+
+	log.Debug.Println("Watching for daemon", dae.Name)
 
 	dae.Uptime = (tasks.CurrentTimeMillisecond() - dae.StartTime) / 1000
 	exited := false
@@ -158,28 +159,11 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 	return true
 }
 
-func Watch(programs_cfg parse_yaml.ProgramMap) {
-	for range time.Tick(1000 * time.Millisecond) {
-		if Stopping {
-			break
-		}
-		exit := true
-		for _, daemons := range tasks.Daemons {
-			for _, daemon := range daemons {
-				cfg := programs_cfg[daemon.Name]
-
-				if !daemon.NoRestart {
-					log.Debug.Println("Watching for daemon", daemon.Name)
-					running := watchDaemon(daemon, cfg)
-					if running {
-						exit = false
-					}
-					log.Debug.Println("Watching for daemon", daemon.Name, "returned")
-				}
-			}
-		}
-		if tasks.Stopping && exit {
-			os.Exit(0)
-		}
+func WatchAlive(handler *tasks.DaemonHandler) bool {
+	// fmt.Println("Watching", handler.Name)
+	alive := false
+	for _, daemon := range handler.Daemons {
+		alive = alive || watchDaemon(daemon, handler.Cfg)
 	}
+	return alive
 }

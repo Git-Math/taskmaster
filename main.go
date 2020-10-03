@@ -34,7 +34,7 @@ func status(program_map parse_yaml.ProgramMap) {
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		daemons := tasks.Daemons[name]
+		daemons := tasks.Daemons[name].Daemons
 		cfg := program_map[name]
 
 		fmt.Println("Program name:", name)
@@ -95,18 +95,18 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 
 	for key, cfg := range program_map {
 		if _, key_exist := new_program_map[key]; !key_exist {
-			RemoveProgram(key, cfg)
+			handler := tasks.Daemons[key]
+			handler.ToDelete = true
+			handler.Stop()
 		} else if !reflect.DeepEqual(cfg, new_program_map[key]) {
-			RemoveProgram(key, cfg)
-			tasks.Add(key, new_program_map[key])
-			if new_program_map[key].Autostart {
-				tasks.StartProgram(key, new_program_map[key])
-			}
+			handler := tasks.Daemons[key]
+			handler.ReloadConfig()
 		}
 	}
 
 	for key, cfg := range new_program_map {
 		if _, key_exist := program_map[key]; !key_exist {
+			fmt.Println("new program: ", key)
 			tasks.Add(key, cfg)
 			if cfg.Autostart {
 				tasks.StartProgram(key, cfg)
@@ -206,18 +206,24 @@ func main() {
 		cfg_yaml = os.Args[1]
 	}
 
+	var program_map parse_yaml.ProgramMap = nil
+
 	program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
 		l.Fatalln(err)
 	}
 
 	for name, program := range program_map {
+		// fmt.Println("Creating program ", name)
 		tasks.Add(name, program)
 		if program.Autostart {
+			// fmt.Println("Starting program ", name)
 			tasks.StartProgram(name, program)
 		}
 	}
+	// fmt.Println("Starting programs OK")
 
+	// fmt.Println("Initializing signal handler")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGHUP)
 	go func() {
@@ -229,8 +235,36 @@ func main() {
 			tasks.StartMut.Unlock()
 		}
 	}()
+	// fmt.Println("Initializing signal handler OK")
 
-	go master.Watch(program_map)
+	// fmt.Println("Launching master watch")
+	go func() {
+		for range time.Tick(1000 * time.Millisecond) {
+			// fmt.Println("tasks.Stopping = ", tasks.Stopping)
+			someAlive := false
+			for name, handler := range tasks.Daemons {
+				// fmt.Println("handler.Started = ", handler.Started)
+				if !handler.Started {
+					continue
+				}
+
+				isAlive := master.WatchAlive(handler)
+				if !isAlive && handler.ToDelete {
+					tasks.Remove(name)
+				} else if !isAlive && handler.ToReload {
+					handler.Init(name, program_map[name])
+					if handler.Cfg.Autostart {
+						handler.Start()
+					}
+				}
+				someAlive = someAlive || isAlive
+			}
+			if tasks.Stopping && !someAlive {
+				os.Exit(0)
+			}
+		}
+	}()
+	// fmt.Println("Launching master watch OK")
 
 	term.Init()
 
