@@ -1,6 +1,6 @@
 programs:
     write:
-        cmd: "/home/arthour/go/src/taskmaster/programs/loop-write-file"
+        cmd: "/home/user42/go/src/taskmaster/programs/loop-write-file"
         numprocs: 1
         umask: 022
         workingdir: ./tmp/write/
@@ -16,7 +16,7 @@ programs:
         stderr: ./tmp/write-022.stderr
         env: ["WHERE=here.txt"]
     write-066:
-        cmd: "/home/arthour/go/src/taskmaster/programs/loop-write-file"
+        cmd: "/home/user42/go/src/taskmaster/programs/loop-write-file"
         numprocs: 1
         umask: 066
         workingdir: ./tmp/write/
