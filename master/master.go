@@ -96,15 +96,23 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 			tasks.Register(dae, "Exited ("+"Success"+")")
 		}
 
+		unexpected := true
+		for _, exitSuccess := range cfg.Exitcodes {
+			if exitSuccess == dae.ExitCode {
+				unexpected = false
+				break
+			}
+		}
+		if unexpected {
+			tasks.Register(dae, "Unexpected stop, exit code: "+strconv.Itoa(dae.ExitCode))
+		}
+
 		restart := false
 		switch cfg.Autorestart {
 		case "unexpected":
 			success := false
-			for exitSuccess := range cfg.Exitcodes {
-				if exitSuccess == dae.ExitCode {
-					success = true
-					break
-				}
+			if !unexpected {
+				success = true
 			}
 			if !success {
 				restart = true
