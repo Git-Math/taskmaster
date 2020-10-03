@@ -53,22 +53,21 @@ func RegisterS(msg string) {
 /* }}} */
 
 type Daemon struct {
-	Name                   string /* name of the program from the yaml */
-	Instance               int
-	Command                *exec.Cmd          /* Cmd */
-	NoRestart              bool               /* Indicate that the daemon is dead */
-	StartTime              int64              /* Start Time of the program */
-	Uptime                 int64              /* Uptime */
-	StartRetries           int                /* Count of time the program was restarted because it stopped before Starttime */
-	Running                bool               /* Indicate that the program has been running long enough to say it's running */
-	Stopping               bool               /* program is stopping */
-	RestartAfterStopped    bool               /* indicate the program should restart once it's stopped */
-	RestartAfterStoppedCfg parse_yaml.Program /* indicate the program should restart once it's stopped */
-	StoptimeCounter        int                /* count before stoptime */
-	ExitCode               int                /* Exit Code of the program or -1 */
-	Err                    chan error         /* Channel to the goroutine waiting for the program to return */
-	ErrMsg                 string
-	mut                    sync.Mutex
+	Name                string /* name of the program from the yaml */
+	Instance            int
+	Command             *exec.Cmd  /* Cmd */
+	NoRestart           bool       /* Indicate that the daemon is dead */
+	StartTime           int64      /* Start Time of the program */
+	Uptime              int64      /* Uptime */
+	StartRetries        int        /* Count of time the program was restarted because it stopped before Starttime */
+	Running             bool       /* Indicate that the program has been running long enough to say it's running */
+	Stopping            bool       /* program is stopping */
+	RestartAfterStopped bool       /* indicate the program should restart once it's stopped */
+	StoptimeCounter     int        /* count before stoptime */
+	ExitCode            int        /* Exit Code of the program or -1 */
+	Err                 chan error /* Channel to the goroutine waiting for the program to return */
+	ErrMsg              string
+	mut                 sync.Mutex
 }
 
 type DaemonHandler struct {
@@ -244,12 +243,10 @@ func (dae *Daemon) Stop(cfg parse_yaml.Program) {
 
 func StartProgram(name string, cfg parse_yaml.Program) {
 	handler := Daemons[name]
-	fmt.Println("Program", name, "started?", handler.Started, "stopping?", handler.Stopping)
 	if handler.Started || handler.Stopping {
 		return
 	}
 	handler.Start()
-	fmt.Println("Program", name, "started?", handler.Started, "stopping?", handler.Stopping)
 }
 
 func StopProgram(program_name string, cfg parse_yaml.Program) {

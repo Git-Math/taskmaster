@@ -82,7 +82,7 @@ func RemoveProgram(program_name string, cfg parse_yaml.Program) {
 	tasks.Remove(program_name)
 }
 
-func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yaml.ProgramMap {
+func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) {
 	tasks.RegisterS("Reload config " + cfg_yaml)
 	new_program_map, err := parse_yaml.ParseYaml(cfg_yaml)
 	if err != nil {
@@ -90,7 +90,7 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 		fmt.Println("reload_config failed, no config changes")
 		log.Debug.Println("Invalid config file: "+cfg_yaml+":", err)
 		log.Debug.Println("reload_config failed, no config changes")
-		return program_map
+		return
 	}
 
 	for key, cfg := range program_map {
@@ -106,14 +106,13 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 
 	for key, cfg := range new_program_map {
 		if _, key_exist := program_map[key]; !key_exist {
+			program_map[key] = new_program_map[key]
 			tasks.Add(key, cfg)
 			if cfg.Autostart {
 				tasks.StartProgram(key, cfg)
 			}
 		}
 	}
-
-	return new_program_map
 }
 
 func exit(program_map parse_yaml.ProgramMap) {
@@ -173,7 +172,7 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 		}
 	case strings.HasPrefix("reload_config", cmd):
 		tasks.StartMut.Lock()
-		program_map = reload_config(program_map, cfg_yaml)
+		reload_config(program_map, cfg_yaml)
 		tasks.StartMut.Unlock()
 	case strings.HasPrefix("exit", cmd):
 		exit(program_map)
@@ -232,7 +231,7 @@ func main() {
 			// Block until a signal is received.
 			_ = <-c
 			tasks.StartMut.Lock()
-			program_map = reload_config(program_map, cfg_yaml)
+			reload_config(program_map, cfg_yaml)
 			tasks.StartMut.Unlock()
 		}
 	}()
@@ -245,12 +244,14 @@ func main() {
 			someAlive := false
 			for name, handler := range tasks.Daemons {
 				isAlive := master.WatchAlive(handler)
+				handler.Started = isAlive
 				if !isAlive {
 					handler.Stopping = false
 				}
 				if !isAlive && handler.ToDelete {
 					tasks.Remove(name)
-				} else if !isAlive && handler.ToReload {
+					delete(program_map, name)
+				} else if !isAlive && handler.ToReload && !tasks.Stopping {
 					handler.Init(name, program_map[name])
 					if handler.Cfg.Autostart {
 						handler.Start()
