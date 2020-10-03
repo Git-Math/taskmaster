@@ -106,7 +106,6 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 
 	for key, cfg := range new_program_map {
 		if _, key_exist := program_map[key]; !key_exist {
-			fmt.Println("new program: ", key)
 			tasks.Add(key, cfg)
 			if cfg.Autostart {
 				tasks.StartProgram(key, cfg)

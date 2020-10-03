@@ -33,7 +33,7 @@ func Register(daemon *Daemon, msg string) {
 			l.Fatal(err)
 		}
 	}
-	fmt.Fprintln(registerFile, CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
+	fmt.Fprintln(registerFile, CurrentTimeMillisecond(), "[", daemon.Name, daemon.Instance, "]", msg)
 	log.Debug.Println(CurrentTimeMillisecond(), "[", daemon.Name, "]", msg)
 }
 
@@ -53,7 +53,8 @@ func RegisterS(msg string) {
 /* }}} */
 
 type Daemon struct {
-	Name                   string             /* name of the program from the yaml */
+	Name                   string /* name of the program from the yaml */
+	Instance               int
 	Command                *exec.Cmd          /* Cmd */
 	NoRestart              bool               /* Indicate that the daemon is dead */
 	StartTime              int64              /* Start Time of the program */
@@ -87,6 +88,7 @@ func (h *DaemonHandler) Init(name string, cfg parse_yaml.Program) {
 		var dae Daemon
 
 		dae.Name = name
+		dae.Instance = i
 		dae.reset()
 		dae.NoRestart = false
 		dae.StartTime = 0

@@ -19,7 +19,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 		return false
 	}
 
-	log.Debug.Println("Watching for daemon", dae.Name)
+	log.Debug.Println("Watching for daemon", dae.Name, dae.Instance)
 
 	dae.Uptime = (tasks.CurrentTimeMillisecond() - dae.StartTime) / 1000
 	exited := false
@@ -163,7 +163,7 @@ func WatchAlive(handler *tasks.DaemonHandler) bool {
 	// fmt.Println("Watching", handler.Name)
 	alive := false
 	for _, daemon := range handler.Daemons {
-		alive = alive || watchDaemon(daemon, handler.Cfg)
+		alive = watchDaemon(daemon, handler.Cfg) || alive
 	}
 	return alive
 }
