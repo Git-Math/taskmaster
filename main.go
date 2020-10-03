@@ -172,7 +172,9 @@ func call_func(text string, program_map parse_yaml.ProgramMap, cfg_yaml string) 
 			}
 		}
 	case strings.HasPrefix("reload_config", cmd):
+		tasks.StartMut.Lock()
 		program_map = reload_config(program_map, cfg_yaml)
+		tasks.StartMut.Unlock()
 	case strings.HasPrefix("exit", cmd):
 		exit(program_map)
 	default:
@@ -242,17 +244,10 @@ func main() {
 			// fmt.Println("tasks.Stopping = ", tasks.Stopping)
 			someAlive := false
 			for name, handler := range tasks.Daemons {
-				// fmt.Println("handler.Started = ", handler.Started)
-				if !handler.Started {
-					continue
-				}
-
 				isAlive := master.WatchAlive(handler)
 				if !isAlive {
-					handler.Started = false
 					handler.Stopping = false
 				}
-				handler.Started = isAlive
 				if !isAlive && handler.ToDelete {
 					tasks.Remove(name)
 				} else if !isAlive && handler.ToReload {

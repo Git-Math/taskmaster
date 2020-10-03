@@ -1,6 +1,6 @@
 programs:
     write:
-        cmd: "/home/user42/go/src/taskmaster/programs/loop-write-file"
+        cmd: "/home/arthour/go/src/taskmaster/programs/loop-write-file"
         numprocs: 1
         umask: 022
         workingdir: ./tmp/write/
@@ -15,19 +15,3 @@ programs:
         stdout: ./tmp/write-022.stdout
         stderr: ./tmp/write-022.stderr
         env: ["WHERE=here.txt"]
-    write-066:
-        cmd: "/home/user42/go/src/taskmaster/programs/loop-write-file"
-        numprocs: 1
-        umask: 066
-        workingdir: ./tmp/write/
-        autostart: true
-        autorestart: unexpected
-        exitcodes:
-            - 0
-        startretries: 1
-        starttime: 1
-        stopsignal: INT
-        stoptime: 1
-        stdout: ./tmp/066.stdout
-        stderr: ./tmp/066.stderr
-        env: ["WHERE=coucou.txt"]
