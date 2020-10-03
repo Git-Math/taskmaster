@@ -55,7 +55,7 @@ func status(program_map parse_yaml.ProgramMap) {
 			if daemon.StartTime != 0 {
 				fmt.Println("        Start time:      ", time.Unix(daemon.StartTime/tasks.SecondToMillisecond, 0))
 			} else {
-				fmt.Println("        Start time:       never")
+				fmt.Println("        Start time:       -")
 			}
 			fmt.Println("        Uptime (seconds):", daemon.Uptime)
 			fmt.Println("        Start retries:   ", daemon.StartRetries, "/", cfg.Startretries)
