@@ -5,6 +5,7 @@ import (
 	l "log"
 	"os"
 	"os/signal"
+	"reflect"
 	"sort"
 	"strings"
 	"syscall"
@@ -14,8 +15,6 @@ import (
 	"taskmaster/tasks"
 	"taskmaster/term"
 	"time"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func usage() {
@@ -97,7 +96,7 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) parse_yam
 	for key, cfg := range program_map {
 		if _, key_exist := new_program_map[key]; !key_exist {
 			RemoveProgram(key, cfg)
-		} else if !cmp.Equal(cfg, new_program_map[key]) {
+		} else if !reflect.DeepEqual(cfg, new_program_map[key]) {
 			RemoveProgram(key, cfg)
 			tasks.Add(key, new_program_map[key])
 			if new_program_map[key].Autostart {
