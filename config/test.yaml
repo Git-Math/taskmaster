@@ -17,13 +17,14 @@ programs:
         env:
     loop-print:
         cmd: "/home/arthour/go/src/taskmaster/programs/loop-print"
-        numprocs: 1
+        numprocs: 3
         umask: 077
         workingdir: ./tmp
         autostart: true
         autorestart: unexpected
         exitcodes:
             - 0
+            - 15
         startretries: 2
         starttime: 5
         stopsignal: TERM
@@ -37,7 +38,7 @@ programs:
         umask: 077
         workingdir: ./tmp
         autostart: true
-        autorestart: always
+        autorestart: never
         exitcodes:
             - 0
         startretries: 2
@@ -68,7 +69,7 @@ programs:
         numprocs: 1
         umask: 077
         workingdir: ./tmp
-        autostart: true
+        autostart: false
         autorestart: never
         exitcodes:
             - 0
