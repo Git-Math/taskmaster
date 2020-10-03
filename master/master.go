@@ -3,6 +3,7 @@ package master
 import (
 	"os"
 	"strconv"
+	"syscall"
 	"taskmaster/log"
 	"taskmaster/parse_yaml"
 	"taskmaster/tasks"
@@ -29,8 +30,9 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 		dae.Running = false
 		if err != nil {
 			dae.ErrMsg = err.Error()
+			dae.ExitCode = int(dae.Command.ProcessState.Sys().(syscall.WaitStatus))
 		} else {
-			dae.ExitCode = 0
+			dae.ExitCode = dae.Command.ProcessState.ExitCode()
 		}
 	default:
 	}
@@ -43,6 +45,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 			exited = true
 			dae.Running = false
 			dae.ErrMsg = errmsg
+			dae.ExitCode = int(dae.Command.ProcessState.Sys().(syscall.WaitStatus))
 		} else {
 			dae.StoptimeCounter++
 			if dae.StoptimeCounter == cfg.Stoptime {
@@ -58,6 +61,7 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 				exited = true
 				dae.Running = false
 				dae.ErrMsg = "forced stop"
+				dae.ExitCode = int(syscall.SIGKILL)
 			}
 		}
 	}
@@ -110,16 +114,18 @@ func watchDaemon(dae *tasks.Daemon, cfg parse_yaml.Program) bool {
 		case "never":
 		}
 
+		restart = restart || dae.RestartAfterStopped
+		dae.RestartAfterStopped = false
+
 		if !restart {
 			dae.NoRestart = true
 		}
 
-		// unlock before calling Start
 		dae.StoptimeCounter = 0
 		dae.Stopping = false
 		dae.StartTime = 0
 
-		if !tasks.Stopping && !dae.Stopping && restart {
+		if !tasks.Stopping && restart {
 			dae.StartRetries = 0
 			dae.Unlock()
 			tasks.Register(dae, "restarting ..")

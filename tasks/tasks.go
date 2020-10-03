@@ -53,19 +53,20 @@ func RegisterS(msg string) {
 /* }}} */
 
 type Daemon struct {
-	Name            string     /* name of the program from the yaml */
-	Command         *exec.Cmd  /* Cmd */
-	NoRestart       bool       /* Indicate that the daemon is dead */
-	StartTime       int64      /* Start Time of the program */
-	Uptime          int64      /* Uptime */
-	StartRetries    int        /* Count of time the program was restarted because it stopped before Starttime */
-	Running         bool       /* Indicate that the program has been running long enough to say it's running */
-	Stopping        bool       /* program is stopping */
-	StoptimeCounter int        /* count before stoptime */
-	ExitCode        int        /* Exit Code of the program or -1 */
-	Err             chan error /* Channel to the goroutine waiting for the program to return */
-	ErrMsg          string
-	mut             sync.Mutex
+	Name                string     /* name of the program from the yaml */
+	Command             *exec.Cmd  /* Cmd */
+	NoRestart           bool       /* Indicate that the daemon is dead */
+	StartTime           int64      /* Start Time of the program */
+	Uptime              int64      /* Uptime */
+	StartRetries        int        /* Count of time the program was restarted because it stopped before Starttime */
+	Running             bool       /* Indicate that the program has been running long enough to say it's running */
+	Stopping            bool       /* program is stopping */
+	RestartAfterStopped bool       /* indicate the program should restart once it's stopped */
+	StoptimeCounter     int        /* count before stoptime */
+	ExitCode            int        /* Exit Code of the program or -1 */
+	Err                 chan error /* Channel to the goroutine waiting for the program to return */
+	ErrMsg              string
+	mut                 sync.Mutex
 }
 
 var Daemons = make(map[string]([]*Daemon))
@@ -95,6 +96,8 @@ func (dae *Daemon) reset() {
 	dae.StartTime = 0
 	dae.Uptime = 0
 	dae.Running = false
+	dae.Stopping = false
+	dae.StoptimeCounter = 0
 	dae.ExitCode = -1
 	dae.Err = nil
 }
@@ -215,6 +218,17 @@ func StopProgram(program_name string, cfg parse_yaml.Program) {
 			if err != nil {
 				log.Debug.Println(dae.Name, ": failed to stop program cleanly:", err)
 			}
+		}
+		dae.Unlock()
+	}
+}
+
+func RestartProgramAfterStopped(program_name string, cfg parse_yaml.Program) {
+	daemons := DaemonRetrieve(program_name)
+	for _, dae := range daemons {
+		dae.Lock()
+		if dae.Stopping {
+			dae.RestartAfterStopped = true
 		}
 		dae.Unlock()
 	}

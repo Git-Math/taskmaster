@@ -44,6 +44,8 @@ func status(program_map parse_yaml.ProgramMap) {
 			status := ""
 			if !daemon.NoRestart && daemon.Uptime != 0 && daemon.Uptime < int64(cfg.Starttime) {
 				status = fmt.Sprintf("Starting %d/%d", daemon.Uptime, cfg.Starttime)
+			} else if daemon.Stopping {
+				status = "Stopping"
 			} else if daemon.Running {
 				status = "Running"
 			} else {
@@ -73,7 +75,7 @@ func stop(name string, cfg parse_yaml.Program) {
 func restart(program_name string, cfg parse_yaml.Program) {
 	tasks.RegisterS("[ " + program_name + " ] restart")
 	stop(program_name, cfg)
-	start(program_name, cfg)
+	tasks.RestartProgramAfterStopped(program_name, cfg)
 }
 
 func RemoveProgram(program_name string, cfg parse_yaml.Program) {
