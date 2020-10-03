@@ -248,6 +248,11 @@ func main() {
 				}
 
 				isAlive := master.WatchAlive(handler)
+				if !isAlive {
+					handler.Started = false
+					handler.Stopping = false
+				}
+				handler.Started = isAlive
 				if !isAlive && handler.ToDelete {
 					tasks.Remove(name)
 				} else if !isAlive && handler.ToReload {
