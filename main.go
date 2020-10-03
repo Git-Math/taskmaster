@@ -101,6 +101,7 @@ func reload_config(program_map parse_yaml.ProgramMap, cfg_yaml string) {
 		} else if !reflect.DeepEqual(cfg, new_program_map[key]) {
 			handler := tasks.Daemons[key]
 			handler.ReloadConfig()
+			program_map[key] = new_program_map[key]
 		}
 	}
 
